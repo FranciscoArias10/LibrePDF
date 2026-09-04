@@ -1,5 +1,19 @@
 # LibrePDF 📄📱
 
+<div align="center">
+
+![Android](https://img.shields.io/badge/Android-passing-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+![iOS](https://img.shields.io/badge/iOS-supported-000000?style=for-the-badge&logo=apple&logoColor=white)
+![Expo](https://img.shields.io/badge/Expo-SDK%2052-000000?style=for-the-badge&logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-0.76-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![CamScanner Alternative](https://img.shields.io/badge/CamScanner-Alternative-0D9488?style=for-the-badge)
+![Ads Free](https://img.shields.io/badge/Ads-0%25_Free-ff69b4?style=for-the-badge)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
+
+</div>
+
 Una aplicación móvil moderna, rápida, libre y 100% gratuita para convertir imágenes de la galería o fotos de la cámara a PDF. Inspirada en CamScanner, **sin anuncios, sin marcas de agua y sin suscripciones**.
 
 Desarrollada con **React Native** y **Expo Go**.
