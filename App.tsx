@@ -26,7 +26,7 @@ const AppTheme = {
 export default function App() {
   return (
     <NavigationContainer theme={AppTheme}>
-      <StatusBar style="light" backgroundColor={COLORS.background} />
+      <StatusBar style="light" />
       <Stack.Navigator
         initialRouteName="Home"
         screenOptions={{

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { SavedPDFDocument } from '../types';
 
@@ -26,6 +26,7 @@ export async function getSavedPDFs(): Promise<SavedPDFDocument[]> {
  */
 export async function savePDFDocument(
   tempUri: string,
+  base64Data: string | undefined,
   title: string,
   pageCount: number,
   thumbnailUri?: string
@@ -44,11 +45,18 @@ export async function savePDFDocument(
 
   const destUri = `${destFolder}${fileName}`;
 
-  // Copy temp PDF file to persistent document directory
-  await FileSystem.copyAsync({
-    from: tempUri,
-    to: destUri,
-  });
+  if (base64Data) {
+    // Write base64 string directly to persistent document directory
+    await FileSystem.writeAsStringAsync(destUri, base64Data, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+  } else {
+    // Fallback if base64 is missing
+    await FileSystem.copyAsync({
+      from: tempUri,
+      to: destUri,
+    });
+  }
 
   // Get file info (size)
   const fileStats = await FileSystem.getInfoAsync(destUri);

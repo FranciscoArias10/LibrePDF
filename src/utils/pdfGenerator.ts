@@ -41,7 +41,7 @@ function getPageCssDirective(settings: PDFSettings): string {
 export async function generatePDF(
   images: PageImage[],
   settings: PDFSettings
-): Promise<{ uri: string; pageCount: number }> {
+): Promise<{ uri: string; base64?: string; pageCount: number }> {
   if (images.length === 0) {
     throw new Error('No hay imágenes para generar el PDF');
   }
@@ -118,10 +118,12 @@ export async function generatePDF(
   // Use expo-print to render PDF to temporary file
   const fileResult = await Print.printToFileAsync({
     html: htmlContent,
+    base64: true,
   });
 
   return {
     uri: fileResult.uri,
+    base64: fileResult.base64,
     pageCount: images.length,
   };
 }

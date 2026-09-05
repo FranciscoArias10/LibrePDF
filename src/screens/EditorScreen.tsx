@@ -6,9 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -172,6 +172,7 @@ export const EditorScreen: React.FC = () => {
       // 2. Save PDF to permanent storage
       const savedDoc = await savePDFDocument(
         pdfResult.uri,
+        pdfResult.base64,
         pdfSettings.documentTitle || 'Documento_Escaneado',
         pdfResult.pageCount,
         pages[0]?.uri

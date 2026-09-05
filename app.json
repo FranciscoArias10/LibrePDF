@@ -41,7 +41,9 @@
           "photosPermission": "LibrePDF necesita acceso a tus fotos para convertirlas a PDF.",
           "cameraPermission": "LibrePDF necesita acceso a tu cámara para escanear documentos."
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-font"
     ]
   }
 }
