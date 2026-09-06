@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as FileSystem from 'expo-file-system/legacy';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -27,6 +30,24 @@ export const ViewerScreen: React.FC = () => {
 
   const handleShare = async () => {
     await sharePDFDocument(doc.uri);
+  };
+
+  const handleViewPDF = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const contentUri = await FileSystem.getContentUriAsync(doc.uri);
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1,
+          type: 'application/pdf',
+        });
+      } else {
+        await sharePDFDocument(doc.uri);
+      }
+    } catch (error) {
+      console.error('Error opening PDF:', error);
+      Alert.alert('Error', 'No se encontró una aplicación para abrir el PDF.');
+    }
   };
 
   const handleDelete = () => {
@@ -109,6 +130,16 @@ export const ViewerScreen: React.FC = () => {
 
         {/* Main Action Buttons */}
         <View style={styles.actionsContainer}>
+          {/* View PDF Button */}
+          <TouchableOpacity
+            style={[styles.bigActionBtn, styles.viewBtn]}
+            onPress={handleViewPDF}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="eye-outline" size={24} color="#FFF" />
+            <Text style={styles.bigActionBtnText}>Abrir y Ver PDF</Text>
+          </TouchableOpacity>
+
           {/* Share Button */}
           <TouchableOpacity
             style={[styles.bigActionBtn, styles.shareBtn]}
@@ -242,6 +273,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     borderRadius: RADIUS.md,
     elevation: 3,
+  },
+  viewBtn: {
+    backgroundColor: COLORS.primaryDark,
   },
   shareBtn: {
     backgroundColor: COLORS.primary,

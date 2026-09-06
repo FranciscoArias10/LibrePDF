@@ -44,7 +44,7 @@ export const PageCard: React.FC<PageCardProps> = ({
             styles.thumbnail,
             { transform: [{ rotate: `${page.rotation}deg` }] },
           ]}
-          resizeMode="cover"
+          resizeMode="contain"
         />
 
         {/* Page Number Badge */}
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   imageContainer: {
-    height: 180,
+    height: 350,
     width: '100%',
     backgroundColor: '#050811',
     alignItems: 'center',
@@ -190,10 +190,10 @@ const styles = StyleSheet.create({
   reorderGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   iconBtn: {
-    padding: SPACING.xs,
+    padding: SPACING.xs - 2,
     borderRadius: RADIUS.xs,
     backgroundColor: COLORS.cardBg,
   },

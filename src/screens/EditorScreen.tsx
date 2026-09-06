@@ -37,6 +37,7 @@ export const EditorScreen: React.FC = () => {
   const [pdfSettings, setPDFSettings] = useState<PDFSettings>(DEFAULT_PDF_SETTINGS);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasPromptedFilterToAll, setHasPromptedFilterToAll] = useState(false);
 
   // Rotate single image
   const handleRotatePage = async (index: number) => {
@@ -90,6 +91,34 @@ export const EditorScreen: React.FC = () => {
   // Apply filter to current page
   const handleFilterChange = (filter: ImageFilterType) => {
     if (pages.length === 0) return;
+
+    if (!hasPromptedFilterToAll && pages.length > 1) {
+      Alert.alert(
+        'Aplicar Filtro',
+        '¿Deseas aplicar este filtro a todas las páginas del documento o solo a esta?',
+        [
+          {
+            text: 'Solo a esta',
+            onPress: () => {
+              setHasPromptedFilterToAll(true);
+              applyFilterToOne(filter);
+            },
+          },
+          {
+            text: 'A todas',
+            onPress: () => {
+              setHasPromptedFilterToAll(true);
+              handleApplyFilterToAll(filter);
+            },
+          },
+        ]
+      );
+    } else {
+      applyFilterToOne(filter);
+    }
+  };
+
+  const applyFilterToOne = (filter: ImageFilterType) => {
     const updated = [...pages];
     updated[selectedIndex] = applyFilterToImage(updated[selectedIndex], filter);
     setPages(updated);
