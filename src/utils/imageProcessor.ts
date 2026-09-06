@@ -47,7 +47,18 @@ export function applyFilterToImage(image: PageImage, filter: ImageFilterType): P
  */
 export async function getBase64ImageUri(fileUri: string): Promise<string> {
   try {
-    const base64 = await FileSystem.readAsStringAsync(fileUri, {
+    // Compress and resize image to prevent WebView OOM crashes on large PDFs
+    const manipResult = await ImageManipulator.manipulateAsync(
+      fileUri,
+      [{ resize: { width: 1000 } }], // 1000px width is plenty for A4 quality
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+
+    if (manipResult.base64) {
+      return `data:image/jpeg;base64,${manipResult.base64}`;
+    }
+
+    const base64 = await FileSystem.readAsStringAsync(manipResult.uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
     return `data:image/jpeg;base64,${base64}`;

@@ -12,6 +12,7 @@ interface PageCardProps {
   onSelect: () => void;
   onRotate: () => void;
   onDelete: () => void;
+  onCrop: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }
@@ -24,6 +25,7 @@ export const PageCard: React.FC<PageCardProps> = ({
   onSelect,
   onRotate,
   onDelete,
+  onCrop,
   onMoveUp,
   onMoveDown,
 }) => {
@@ -91,6 +93,15 @@ export const PageCard: React.FC<PageCardProps> = ({
             />
           </TouchableOpacity>
         </View>
+
+        {/* Edit/Crop Button */}
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={onCrop}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="crop" size={16} color={COLORS.primaryLight} />
+        </TouchableOpacity>
 
         {/* Rotate Button */}
         <TouchableOpacity

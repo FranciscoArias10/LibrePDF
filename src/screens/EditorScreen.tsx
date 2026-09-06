@@ -22,6 +22,7 @@ import { Header } from '../components/Header';
 import { PageCard } from '../components/PageCard';
 import { FilterPicker } from '../components/FilterPicker';
 import { PDFSettingsModal } from '../components/PDFSettingsModal';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Editor'>;
 type EditorRouteProp = RouteProp<RootStackParamList, 'Editor'>;
@@ -39,6 +40,10 @@ export const EditorScreen: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasPromptedFilterToAll, setHasPromptedFilterToAll] = useState(false);
 
+  // Image Cropper State
+  const [isCropperVisible, setIsCropperVisible] = useState(false);
+  const [croppingIndex, setCroppingIndex] = useState<number | null>(null);
+
   // Rotate single image
   const handleRotatePage = async (index: number) => {
     const targetPage = pages[index];
@@ -46,6 +51,27 @@ export const EditorScreen: React.FC = () => {
     const updated = [...pages];
     updated[index] = rotated;
     setPages(updated);
+  };
+
+  // Open Cropper
+  const handleCropPage = (index: number) => {
+    setCroppingIndex(index);
+    setIsCropperVisible(true);
+  };
+
+  // On Crop Complete
+  const handleCropComplete = (result: { uri: string }) => {
+    if (croppingIndex !== null && result.uri) {
+      const updated = [...pages];
+      updated[croppingIndex] = {
+        ...updated[croppingIndex],
+        uri: result.uri,
+        originalUri: result.uri, // Make it the new baseline for rotation/filters
+      };
+      setPages(updated);
+    }
+    setIsCropperVisible(false);
+    setCroppingIndex(null);
   };
 
   // Reorder move up
@@ -277,6 +303,7 @@ export const EditorScreen: React.FC = () => {
                 onSelect={() => setSelectedIndex(index)}
                 onRotate={() => handleRotatePage(index)}
                 onDelete={() => handleDeletePage(index)}
+                onCrop={() => handleCropPage(index)}
                 onMoveUp={() => handleMoveUp(index)}
                 onMoveDown={() => handleMoveDown(index)}
               />
@@ -338,6 +365,19 @@ export const EditorScreen: React.FC = () => {
         onClose={() => setIsSettingsModalVisible(false)}
         onConfirmGenerate={handleGeneratePDF}
       />
+
+      {/* Custom Image Cropper Modal */}
+      {croppingIndex !== null && pages[croppingIndex] && (
+        <ImageCropperModal
+          visible={isCropperVisible}
+          imageUri={pages[croppingIndex].originalUri}
+          onClose={() => {
+            setIsCropperVisible(false);
+            setCroppingIndex(null);
+          }}
+          onCropComplete={(croppedUri) => handleCropComplete({ uri: croppedUri })}
+        />
+      )}
     </SafeAreaView>
   );
 };
