@@ -60,13 +60,15 @@ export const EditorScreen: React.FC = () => {
   };
 
   // On Crop Complete
-  const handleCropComplete = (result: { uri: string }) => {
+  const handleCropComplete = (result: { uri: string; width: number; height: number }) => {
     if (croppingIndex !== null && result.uri) {
       const updated = [...pages];
       updated[croppingIndex] = {
         ...updated[croppingIndex],
         uri: result.uri,
         originalUri: result.uri, // Make it the new baseline for rotation/filters
+        width: result.width,
+        height: result.height,
       };
       setPages(updated);
     }
@@ -371,11 +373,13 @@ export const EditorScreen: React.FC = () => {
         <ImageCropperModal
           visible={isCropperVisible}
           imageUri={pages[croppingIndex].originalUri}
+          imageWidth={pages[croppingIndex].width}
+          imageHeight={pages[croppingIndex].height}
           onClose={() => {
             setIsCropperVisible(false);
             setCroppingIndex(null);
           }}
-          onCropComplete={(croppedUri) => handleCropComplete({ uri: croppedUri })}
+          onCropComplete={handleCropComplete}
         />
       )}
     </SafeAreaView>

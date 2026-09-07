@@ -10,8 +10,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface ImageCropperModalProps {
   visible: boolean;
   imageUri: string;
+  imageWidth: number;
+  imageHeight: number;
   onClose: () => void;
-  onCropComplete: (croppedUri: string) => void;
+  onCropComplete: (result: { uri: string; width: number; height: number }) => void;
 }
 
 type ActiveHandle = 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT' | 'TOP' | 'BOTTOM' | 'LEFT' | 'RIGHT' | 'CENTER' | null;
@@ -19,6 +21,8 @@ type ActiveHandle = 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT' | 
 export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   visible,
   imageUri,
+  imageWidth,
+  imageHeight,
   onClose,
   onCropComplete,
 }) => {
@@ -30,6 +34,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   const initialCropBoxRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const currentCropBoxRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
   const imgLayoutRef = useRef({ width: 0, height: 0 });
+  const actualImageBoundsRef = useRef({ x: 0, y: 0, width: 0, height: 0, scale: 1 });
 
   const setCropBox = (box: { x: number; y: number; width: number; height: number } | null) => {
     currentCropBoxRef.current = box;
@@ -49,20 +54,40 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     }
   }, [visible]);
 
+  // Recalculate bounds when layout is available
+  useEffect(() => {
+    if (imgLayoutRef.current.width > 0 && imgLayoutRef.current.height > 0 && imageWidth > 0 && imageHeight > 0) {
+      const layoutW = imgLayoutRef.current.width;
+      const layoutH = imgLayoutRef.current.height;
+      
+      const scale = Math.min(layoutW / imageWidth, layoutH / imageHeight);
+      const renderedW = imageWidth * scale;
+      const renderedH = imageHeight * scale;
+      const offsetX = (layoutW - renderedW) / 2;
+      const offsetY = (layoutH - renderedH) / 2;
+      
+      actualImageBoundsRef.current = {
+        x: offsetX,
+        y: offsetY,
+        width: renderedW,
+        height: renderedH,
+        scale,
+      };
+      
+      if (!currentCropBoxRef.current) {
+        setCropBox({
+          x: offsetX,
+          y: offsetY,
+          width: Math.max(50, renderedW),
+          height: Math.max(50, renderedH),
+        });
+      }
+    }
+  }, [imgLayout, imageWidth, imageHeight]);
+
   const handleImageLayout = (e: any) => {
     const { width, height } = e.nativeEvent.layout;
     setImgLayout({ width, height });
-    
-    // Initialize crop box to 90% of image size on first layout
-    if (!cropBox && width > 0 && height > 0) {
-      const inset = 20;
-      setCropBox({
-        x: inset,
-        y: inset,
-        width: Math.max(50, width - inset * 2),
-        height: Math.max(50, height - inset * 2),
-      });
-    }
   };
 
   const HIT_SLOP = 40;
@@ -145,23 +170,23 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
           }
         }
 
-        // 2. Clamp to Image Boundaries
-        const layout = imgLayoutRef.current;
-        if (newX < 0) {
-          if (handle !== 'CENTER') newW += newX; // shrink width if it hit bounds
-          newX = 0;
+        // 2. Clamp to Actual Image Boundaries (not the wrapper)
+        const bounds = actualImageBoundsRef.current;
+        if (newX < bounds.x) {
+          if (handle !== 'CENTER') newW -= (bounds.x - newX);
+          newX = bounds.x;
         }
-        if (newY < 0) {
-          if (handle !== 'CENTER') newH += newY;
-          newY = 0;
+        if (newY < bounds.y) {
+          if (handle !== 'CENTER') newH -= (bounds.y - newY);
+          newY = bounds.y;
         }
-        if (newX + newW > layout.width) {
-          if (handle === 'CENTER') newX = layout.width - newW;
-          else newW = layout.width - newX;
+        if (newX + newW > bounds.x + bounds.width) {
+          if (handle === 'CENTER') newX = bounds.x + bounds.width - newW;
+          else newW = bounds.x + bounds.width - newX;
         }
-        if (newY + newH > layout.height) {
-          if (handle === 'CENTER') newY = layout.height - newH;
-          else newH = layout.height - newY;
+        if (newY + newH > bounds.y + bounds.height) {
+          if (handle === 'CENTER') newY = bounds.y + bounds.height - newH;
+          else newH = bounds.y + bounds.height - newY;
         }
 
         setCropBox({ x: newX, y: newY, width: newW, height: newH });
@@ -173,25 +198,24 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   ).current;
 
   const handleSave = async () => {
-    if (!cropBox || imgLayout.width === 0 || imgLayout.height === 0) {
-      onCropComplete(imageUri);
+    if (!cropBox || imgLayout.width === 0 || imgLayout.height === 0 || imageWidth === 0) {
+      onCropComplete({ uri: imageUri, width: imageWidth, height: imageHeight });
       return;
     }
 
     setIsProcessing(true);
     try {
-      // We need original image dimensions to map the crop layout to original pixels
-      const { width: origW, height: origH } = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-        Image.getSize(imageUri, (width, height) => resolve({ width, height }), reject);
-      });
-
-      const scaleX = origW / imgLayout.width;
-      const scaleY = origH / imgLayout.height;
-
-      const cropOriginX = Math.max(0, cropBox.x * scaleX);
-      const cropOriginY = Math.max(0, cropBox.y * scaleY);
-      const cropWidth = Math.min(origW - cropOriginX, cropBox.width * scaleX);
-      const cropHeight = Math.min(origH - cropOriginY, cropBox.height * scaleY);
+      const bounds = actualImageBoundsRef.current;
+      
+      // Calculate crop relative to the ACTUAL rendered image (remove letterbox offsets)
+      const relativeX = cropBox.x - bounds.x;
+      const relativeY = cropBox.y - bounds.y;
+      
+      // Convert to original pixels using the calculated scale
+      const cropOriginX = Math.max(0, relativeX / bounds.scale);
+      const cropOriginY = Math.max(0, relativeY / bounds.scale);
+      const cropWidth = Math.min(imageWidth - cropOriginX, cropBox.width / bounds.scale);
+      const cropHeight = Math.min(imageHeight - cropOriginY, cropBox.height / bounds.scale);
 
       const result = await ImageManipulator.manipulateAsync(
         imageUri,
@@ -208,7 +232,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
         { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
       );
 
-      onCropComplete(result.uri);
+      onCropComplete({ uri: result.uri, width: result.width, height: result.height });
     } catch (error) {
       console.error('Error cropping image:', error);
       Alert.alert('Error', 'No se pudo recortar la imagen.');
@@ -219,12 +243,12 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
   const handleReset = () => {
     if (imgLayout.width > 0 && imgLayout.height > 0) {
-      const inset = 20;
+      const bounds = actualImageBoundsRef.current;
       setCropBox({
-        x: inset,
-        y: inset,
-        width: imgLayout.width - inset * 2,
-        height: imgLayout.height - inset * 2,
+        x: bounds.x,
+        y: bounds.y,
+        width: Math.max(50, bounds.width),
+        height: Math.max(50, bounds.height),
       });
     }
   };
