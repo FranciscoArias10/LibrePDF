@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonPrimaryText: {
-    color: '#000', // Because primary is bright neon cyan, black text reads best
+    color: '#FFFFFF', // White text reads best on neon red
     fontSize: 15,
     fontWeight: '700',
   },

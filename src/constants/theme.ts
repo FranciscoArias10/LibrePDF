@@ -6,11 +6,11 @@ export const COLORS = {
   border: '#27272A',
   borderLight: '#3F3F46',
 
-  // Accent Colors (Futuristic Neon Cyan)
-  primary: '#00E5FF',
-  primaryLight: '#33EFFF',
-  primaryDark: '#00B2CC',
-  primaryGlow: 'rgba(0, 229, 255, 0.15)',
+  // Accent Colors (Futuristic Neon Red)
+  primary: '#FF003C',
+  primaryLight: '#FF3366',
+  primaryDark: '#CC0030',
+  primaryGlow: 'rgba(255, 0, 60, 0.15)',
 
   // Secondary Accents
   accentBlue: '#3B82F6',
