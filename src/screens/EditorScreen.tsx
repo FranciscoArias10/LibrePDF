@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { PageCard } from '../components/PageCard';
 import { FilterPicker } from '../components/FilterPicker';
 import { PDFSettingsModal } from '../components/PDFSettingsModal';
 import { ImageCropperModal } from '../components/ImageCropperModal';
+import { FilterApplyModal } from '../components/FilterApplyModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Editor'>;
 type EditorRouteProp = RouteProp<RootStackParamList, 'Editor'>;
@@ -39,25 +40,32 @@ export const EditorScreen: React.FC = () => {
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasPromptedFilterToAll, setHasPromptedFilterToAll] = useState(false);
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [pendingFilter, setPendingFilter] = useState<ImageFilterType | null>(null);
 
   // Image Cropper State
   const [isCropperVisible, setIsCropperVisible] = useState(false);
   const [croppingIndex, setCroppingIndex] = useState<number | null>(null);
 
+  // Stable selection handler to prevent re-rendering all PageCards
+  const handleSelectPage = useCallback((index: number) => {
+    setSelectedIndex(index);
+  }, []);
+
   // Rotate single image
-  const handleRotatePage = async (index: number) => {
+  const handleRotatePage = useCallback(async (index: number) => {
     const targetPage = pages[index];
     const rotated = await rotateImage(targetPage);
     const updated = [...pages];
     updated[index] = rotated;
     setPages(updated);
-  };
+  }, [pages]);
 
   // Open Cropper
-  const handleCropPage = (index: number) => {
+  const handleCropPage = useCallback((index: number) => {
     setCroppingIndex(index);
     setIsCropperVisible(true);
-  };
+  }, []);
 
   // On Crop Complete
   const handleCropComplete = (result: { uri: string; width: number; height: number }) => {
@@ -77,7 +85,7 @@ export const EditorScreen: React.FC = () => {
   };
 
   // Reorder move up
-  const handleMoveUp = (index: number) => {
+  const handleMoveUp = useCallback((index: number) => {
     if (index === 0) return;
     const updated = [...pages];
     const temp = updated[index];
@@ -85,10 +93,10 @@ export const EditorScreen: React.FC = () => {
     updated[index - 1] = temp;
     setPages(updated);
     setSelectedIndex(index - 1);
-  };
+  }, [pages]);
 
   // Reorder move down
-  const handleMoveDown = (index: number) => {
+  const handleMoveDown = useCallback((index: number) => {
     if (index === pages.length - 1) return;
     const updated = [...pages];
     const temp = updated[index];
@@ -96,10 +104,10 @@ export const EditorScreen: React.FC = () => {
     updated[index + 1] = temp;
     setPages(updated);
     setSelectedIndex(index + 1);
-  };
+  }, [pages]);
 
   // Delete page
-  const handleDeletePage = (index: number) => {
+  const handleDeletePage = useCallback((index: number) => {
     Alert.alert('Eliminar Página', '¿Deseas quitar esta página?', [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -114,36 +122,36 @@ export const EditorScreen: React.FC = () => {
         },
       },
     ]);
-  };
+  }, [pages, selectedIndex]);
 
   // Apply filter to current page
   const handleFilterChange = (filter: ImageFilterType) => {
     if (pages.length === 0) return;
 
     if (!hasPromptedFilterToAll && pages.length > 1) {
-      Alert.alert(
-        'Aplicar Filtro',
-        '¿Deseas aplicar este filtro a todas las páginas del documento o solo a esta?',
-        [
-          {
-            text: 'Solo a esta',
-            onPress: () => {
-              setHasPromptedFilterToAll(true);
-              applyFilterToOne(filter);
-            },
-          },
-          {
-            text: 'A todas',
-            onPress: () => {
-              setHasPromptedFilterToAll(true);
-              handleApplyFilterToAll(filter);
-            },
-          },
-        ]
-      );
+      setPendingFilter(filter);
+      setIsFilterModalVisible(true);
     } else {
       applyFilterToOne(filter);
     }
+  };
+
+  const handleConfirmFilterToOne = () => {
+    if (pendingFilter) {
+      applyFilterToOne(pendingFilter);
+      setHasPromptedFilterToAll(true);
+    }
+    setIsFilterModalVisible(false);
+    setPendingFilter(null);
+  };
+
+  const handleConfirmFilterToAll = () => {
+    if (pendingFilter) {
+      handleApplyFilterToAll(pendingFilter);
+      setHasPromptedFilterToAll(true);
+    }
+    setIsFilterModalVisible(false);
+    setPendingFilter(null);
   };
 
   const applyFilterToOne = (filter: ImageFilterType) => {
@@ -302,12 +310,12 @@ export const EditorScreen: React.FC = () => {
                 index={index}
                 totalPages={pages.length}
                 isSelected={index === selectedIndex}
-                onSelect={() => setSelectedIndex(index)}
-                onRotate={() => handleRotatePage(index)}
-                onDelete={() => handleDeletePage(index)}
-                onCrop={() => handleCropPage(index)}
-                onMoveUp={() => handleMoveUp(index)}
-                onMoveDown={() => handleMoveDown(index)}
+                onSelect={handleSelectPage}
+                onRotate={handleRotatePage}
+                onDelete={handleDeletePage}
+                onCrop={handleCropPage}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
               />
             )}
             contentContainerStyle={styles.listContainer}
@@ -382,6 +390,14 @@ export const EditorScreen: React.FC = () => {
           onCropComplete={handleCropComplete}
         />
       )}
+
+      {/* Custom Filter Apply Modal */}
+      <FilterApplyModal
+        visible={isFilterModalVisible}
+        onApplyToOne={handleConfirmFilterToOne}
+        onApplyToAll={handleConfirmFilterToAll}
+        onClose={() => setIsFilterModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

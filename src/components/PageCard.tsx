@@ -9,15 +9,15 @@ interface PageCardProps {
   index: number;
   totalPages: number;
   isSelected: boolean;
-  onSelect: () => void;
-  onRotate: () => void;
-  onDelete: () => void;
-  onCrop: () => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
+  onSelect: (index: number) => void;
+  onRotate: (index: number) => void;
+  onDelete: (index: number) => void;
+  onCrop: (index: number) => void;
+  onMoveUp?: (index: number) => void;
+  onMoveDown?: (index: number) => void;
 }
 
-export const PageCard: React.FC<PageCardProps> = ({
+export const PageCard = React.memo<PageCardProps>(({
   page,
   index,
   totalPages,
@@ -35,7 +35,7 @@ export const PageCard: React.FC<PageCardProps> = ({
   return (
     <TouchableOpacity
       style={[styles.card, isSelected && styles.cardSelected]}
-      onPress={onSelect}
+      onPress={() => onSelect(index)}
       activeOpacity={0.9}
     >
       {/* Thumbnail Container */}
@@ -69,7 +69,7 @@ export const PageCard: React.FC<PageCardProps> = ({
         <View style={styles.reorderGroup}>
           <TouchableOpacity
             style={[styles.iconBtn, index === 0 && styles.iconBtnDisabled]}
-            onPress={onMoveUp}
+            onPress={() => onMoveUp && onMoveUp(index)}
             disabled={index === 0}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -82,7 +82,7 @@ export const PageCard: React.FC<PageCardProps> = ({
 
           <TouchableOpacity
             style={[styles.iconBtn, index === totalPages - 1 && styles.iconBtnDisabled]}
-            onPress={onMoveDown}
+            onPress={() => onMoveDown && onMoveDown(index)}
             disabled={index === totalPages - 1}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -97,7 +97,7 @@ export const PageCard: React.FC<PageCardProps> = ({
         {/* Edit/Crop Button */}
         <TouchableOpacity
           style={styles.iconBtn}
-          onPress={onCrop}
+          onPress={() => onCrop(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="crop" size={16} color={COLORS.primaryLight} />
@@ -106,7 +106,7 @@ export const PageCard: React.FC<PageCardProps> = ({
         {/* Rotate Button */}
         <TouchableOpacity
           style={styles.iconBtn}
-          onPress={onRotate}
+          onPress={() => onRotate(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="reload" size={16} color={COLORS.primaryLight} />
@@ -115,7 +115,7 @@ export const PageCard: React.FC<PageCardProps> = ({
         {/* Delete Button */}
         <TouchableOpacity
           style={[styles.iconBtn, styles.deleteBtn]}
-          onPress={onDelete}
+          onPress={() => onDelete(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="trash-outline" size={16} color={COLORS.accentRed} />
@@ -123,7 +123,7 @@ export const PageCard: React.FC<PageCardProps> = ({
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {
