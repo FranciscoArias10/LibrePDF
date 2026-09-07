@@ -18,7 +18,7 @@ export const FilterPicker: React.FC<FilterPickerProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Filtros CamScanner</Text>
+        <Text style={styles.title}>Filtros LibrePDF</Text>
         {onApplyToAll && (
           <TouchableOpacity
             onPress={() => onApplyToAll(currentFilter)}

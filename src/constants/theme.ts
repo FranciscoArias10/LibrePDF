@@ -1,16 +1,16 @@
 export const COLORS = {
-  // Primary Dark Palette
-  background: '#0B0F19',
-  cardBg: '#161F33',
-  cardBgElevated: '#1E293B',
-  border: '#2A364F',
-  borderLight: '#334155',
+  // Primary Dark Palette (Minimalist OLED Black)
+  background: '#000000',
+  cardBg: '#09090B',
+  cardBgElevated: '#18181B',
+  border: '#27272A',
+  borderLight: '#3F3F46',
 
-  // Accent Colors (CamScanner Inspired Vibrant Teal / Emerald)
-  primary: '#0D9488',
-  primaryLight: '#14B8A6',
-  primaryDark: '#0F766E',
-  primaryGlow: 'rgba(20, 184, 166, 0.15)',
+  // Accent Colors (Futuristic Neon Cyan)
+  primary: '#00E5FF',
+  primaryLight: '#33EFFF',
+  primaryDark: '#00B2CC',
+  primaryGlow: 'rgba(0, 229, 255, 0.15)',
 
   // Secondary Accents
   accentBlue: '#3B82F6',
@@ -20,13 +20,13 @@ export const COLORS = {
   accentGreen: '#10B981',
 
   // Neutral Text Colors
-  textPrimary: '#F8FAFC',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
+  textPrimary: '#FAFAFA',
+  textSecondary: '#A1A1AA',
+  textMuted: '#71717A',
 
   // Overlay / Glass
-  glassOverlay: 'rgba(15, 23, 42, 0.85)',
-  modalOverlay: 'rgba(0, 0, 0, 0.75)',
+  glassOverlay: 'rgba(0, 0, 0, 0.85)',
+  modalOverlay: 'rgba(0, 0, 0, 0.90)',
 };
 
 export const SPACING = {
@@ -58,6 +58,6 @@ export const DEFAULT_PDF_SETTINGS = {
   orientation: 'portrait' as const,
   margin: 'none' as const,
   quality: 0.85,
-  documentTitle: 'CamScan_LibreDoc',
+  documentTitle: 'LibrePDF_Doc',
   compressImages: true,
 };

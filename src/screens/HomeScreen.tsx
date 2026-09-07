@@ -153,7 +153,7 @@ export const HomeScreen: React.FC = () => {
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <Header
         title="LibrePDF"
-        subtitle="Escáner & Convertidor a PDF (CamScanner Free)"
+        subtitle="Escáner & Convertidor a PDF"
       />
 
       <View style={styles.container}>
