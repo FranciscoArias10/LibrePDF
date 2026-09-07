@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Modal, StyleSheet, Image, TouchableOpacity, Text, Dimensions, PanResponder, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImageManipulator from 'expo-image-manipulator';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { SPACING, RADIUS } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   onClose,
   onCropComplete,
 }) => {
+  const { colors } = useTheme();
   const [imgLayout, setImgLayoutState] = useState({ width: 0, height: 0 });
   const [cropBox, setCropBoxState] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -46,7 +48,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     setImgLayoutState(layout);
   };
 
-  // Reset when visibility changes
   useEffect(() => {
     if (!visible) {
       setImgLayout({ width: 0, height: 0 });
@@ -54,7 +55,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     }
   }, [visible]);
 
-  // Recalculate bounds when layout is available
   useEffect(() => {
     if (imgLayoutRef.current.width > 0 && imgLayoutRef.current.height > 0 && imageWidth > 0 && imageHeight > 0) {
       const layoutW = imgLayoutRef.current.width;
@@ -103,7 +103,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
         
         const { x, y, width, height } = currentBox;
         
-        // Determine which handle was touched
         const isTop = Math.abs(locationY - y) < HIT_SLOP;
         const isBottom = Math.abs(locationY - (y + height)) < HIT_SLOP;
         const isLeft = Math.abs(locationX - x) < HIT_SLOP;
@@ -136,12 +135,10 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
         const handle = activeHandleRef.current;
 
-        // Move logic
         if (handle === 'CENTER') {
           newX = initial.x + dx;
           newY = initial.y + dy;
         } else {
-          // Resize logic
           if (handle.includes('TOP')) {
             newY = initial.y + dy;
             newH = initial.height - dy;
@@ -158,7 +155,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
           }
         }
 
-        // 1. Clamp Minimum Size for Resizing
         if (handle !== 'CENTER') {
           if (newW < MIN_SIZE) {
             if (handle.includes('LEFT')) newX = initial.x + initial.width - MIN_SIZE;
@@ -170,7 +166,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
           }
         }
 
-        // 2. Clamp to Actual Image Boundaries (not the wrapper)
         const bounds = actualImageBoundsRef.current;
         if (newX < bounds.x) {
           if (handle !== 'CENTER') newW -= (bounds.x - newX);
@@ -206,18 +201,15 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
     setIsProcessing(true);
     try {
       const bounds = actualImageBoundsRef.current;
-      
-      // Calculate crop relative to the ACTUAL rendered image (remove letterbox offsets)
       const relativeX = cropBox.x - bounds.x;
       const relativeY = cropBox.y - bounds.y;
       
-      // Convert to original pixels using the calculated scale
       const cropOriginX = Math.max(0, relativeX / bounds.scale);
       const cropOriginY = Math.max(0, relativeY / bounds.scale);
       const cropWidth = Math.min(imageWidth - cropOriginX, cropBox.width / bounds.scale);
       const cropHeight = Math.min(imageHeight - cropOriginY, cropBox.height / bounds.scale);
 
-      const result = await ImageManipulator.manipulateAsync(
+      const result = await manipulateAsync(
         imageUri,
         [
           {
@@ -229,7 +221,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             },
           },
         ],
-        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+        { compress: 0.9, format: SaveFormat.JPEG }
       );
 
       onCropComplete({ uri: result.uri, width: result.width, height: result.height });
@@ -254,41 +246,33 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity style={styles.headerBtn} onPress={onClose} disabled={isProcessing}>
-            <Ionicons name="close" size={26} color="#FFF" />
+            <Ionicons name="close" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.title}>Encuadrar Imagen</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Encuadrar Imagen</Text>
           <TouchableOpacity style={styles.headerBtn} onPress={handleSave} disabled={isProcessing}>
             {isProcessing ? (
-              <ActivityIndicator color={COLORS.primaryLight} size="small" />
+              <ActivityIndicator color={colors.primary} size="small" />
             ) : (
-              <Ionicons name="checkmark" size={26} color={COLORS.primaryLight} />
+              <Ionicons name="checkmark" size={26} color={colors.primary} />
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Workspace */}
         <View style={styles.workspace}>
-          <View
-            style={styles.imageWrapper}
-            onLayout={handleImageLayout}
-          >
+          <View style={styles.imageWrapper} onLayout={handleImageLayout}>
             <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
 
-            {/* Visual Layer */}
             {cropBox && (
               <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                {/* Dimmed Masks */}
                 <View style={[styles.mask, { top: 0, left: 0, right: 0, height: cropBox.y }]} />
                 <View style={[styles.mask, { top: cropBox.y + cropBox.height, left: 0, right: 0, bottom: 0 }]} />
                 <View style={[styles.mask, { top: cropBox.y, left: 0, width: cropBox.x, height: cropBox.height }]} />
                 <View style={[styles.mask, { top: cropBox.y, left: cropBox.x + cropBox.width, right: 0, height: cropBox.height }]} />
 
-                {/* Crop Box Frame with Handles */}
                 <View
                   style={[
                     styles.cropBox,
@@ -300,7 +284,6 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
                     },
                   ]}
                 >
-                  {/* Corner Indicators */}
                   <View style={[styles.corner, styles.cornerTopLeft]} />
                   <View style={[styles.corner, styles.cornerTopRight]} />
                   <View style={[styles.corner, styles.cornerBottomLeft]} />
@@ -308,19 +291,16 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
                 </View>
               </View>
             )}
-            
-            {/* Interactive Layer (Full size, NO children to prevent Android touch coordinate bugs) */}
             <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers} />
           </View>
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
-            <Ionicons name="scan-outline" size={20} color="#FFF" />
-            <Text style={styles.resetBtnText}>Restablecer</Text>
+          <TouchableOpacity style={[styles.resetBtn, { backgroundColor: colors.cardBg }]} onPress={handleReset}>
+            <Ionicons name="scan-outline" size={20} color={colors.textPrimary} />
+            <Text style={[styles.resetBtnText, { color: colors.textPrimary }]}>Restablecer</Text>
           </TouchableOpacity>
-          <Text style={styles.instructions}>Arrastra las esquinas o bordes</Text>
+          <Text style={[styles.instructions, { color: colors.textSecondary }]}>Arrastra las esquinas o bordes</Text>
         </View>
       </SafeAreaView>
     </Modal>
@@ -333,7 +313,6 @@ const CORNER_WIDTH = 4;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
@@ -341,13 +320,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.md,
-    backgroundColor: '#111',
+    borderBottomWidth: 1,
   },
   headerBtn: {
     padding: SPACING.xs,
   },
   title: {
-    color: '#FFF',
     fontSize: 17,
     fontWeight: '700',
   },
@@ -356,14 +334,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.lg,
-    backgroundColor: '#111',
   },
   imageWrapper: {
     width: '100%',
-    aspectRatio: 0.75, // standard photo ratio
+    aspectRatio: 0.75,
     maxWidth: SCREEN_WIDTH - SPACING.lg * 2,
     position: 'relative',
-    backgroundColor: '#000',
   },
   image: {
     width: '100%',
@@ -417,7 +393,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   instructions: {
-    color: COLORS.textMuted,
+    color: '#71717A',
     fontSize: 13,
   },
   resetBtn: {

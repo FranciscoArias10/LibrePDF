@@ -44,14 +44,15 @@ export function applyFilterToImage(image: PageImage, filter: ImageFilterType): P
 
 /**
  * Converts image file URI to base64 string for embedding in PDF HTML template
+ * We MUST use Base64 because Android WebView blocks local file:// URIs
  */
 export async function getBase64ImageUri(fileUri: string): Promise<string> {
   try {
     // Compress and resize image to prevent WebView OOM crashes on large PDFs
     const manipResult = await ImageManipulator.manipulateAsync(
       fileUri,
-      [{ resize: { width: 1000 } }], // 1000px width is plenty for A4 quality
-      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      [{ resize: { width: 800 } }], // 800px width is sufficient for A4
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
     );
 
     if (manipResult.base64) {

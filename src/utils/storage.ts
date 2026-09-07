@@ -51,8 +51,8 @@ export async function savePDFDocument(
       encoding: FileSystem.EncodingType.Base64,
     });
   } else {
-    // Fallback if base64 is missing
-    await FileSystem.copyAsync({
+    // Fallback: Move temporary file to persistent directory
+    await FileSystem.moveAsync({
       from: tempUri,
       to: destUri,
     });

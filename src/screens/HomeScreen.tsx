@@ -20,12 +20,14 @@ import { SavedPDFDocument, PageImage, RootStackParamList } from '../types';
 import { getSavedPDFs, deletePDFDocument, sharePDFDocument } from '../utils/storage';
 import { Header } from '../components/Header';
 import { DocumentCard } from '../components/DocumentCard';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { SPACING } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { colors, isDark, toggleTheme } = useTheme();
   const [documents, setDocuments] = useState<SavedPDFDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -47,17 +49,10 @@ export const HomeScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  // Open Gallery picker (Multi-select)
   const handlePickFromGallery = async () => {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          'Permiso Requerido',
-          'Necesitamos acceso a tu galería para importar imágenes.'
-        );
-        return;
-      }
+      if (!permission.granted) return;
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -76,26 +71,17 @@ export const HomeScreen: React.FC = () => {
           rotation: 0,
           filter: 'original',
         }));
-
         navigation.navigate('Editor', { initialImages: pages });
       }
     } catch (error) {
-      console.error('Error picking images from gallery:', error);
       Alert.alert('Error', 'No se pudieron seleccionar las imágenes');
     }
   };
 
-  // Take photo with Camera
   const handleTakePhoto = async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          'Permiso Requerido',
-          'Necesitamos acceso a tu cámara para escanear documentos.'
-        );
-        return;
-      }
+      if (!permission.granted) return;
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
@@ -113,31 +99,18 @@ export const HomeScreen: React.FC = () => {
           rotation: 0,
           filter: 'original',
         };
-
         navigation.navigate('Editor', { initialImages: [page] });
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
       Alert.alert('Error', 'No se pudo abrir la cámara');
     }
   };
 
   const handleDeleteDoc = (doc: SavedPDFDocument) => {
-    Alert.alert(
-      'Eliminar Documento',
-      `¿Estás seguro de eliminar "${doc.title}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await deletePDFDocument(doc.id);
-            await loadDocuments();
-          },
-        },
-      ]
-    );
+    Alert.alert('Eliminar Documento', `¿Estás seguro de eliminar "${doc.title}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: async () => { await deletePDFDocument(doc.id); await loadDocuments(); } },
+    ]);
   };
 
   const handleShareDoc = async (doc: SavedPDFDocument) => {
@@ -149,25 +122,26 @@ export const HomeScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      <Header
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <Header 
         title="LibrePDF"
-        subtitle="Escáner & Convertidor a PDF"
+        rightIcon={isDark ? "sunny" : "moon"}
+        onRightPress={toggleTheme}
       />
 
       <View style={styles.container}>
         {/* Quick Action CamScanner Banner */}
-        <View style={styles.bannerContainer}>
-          <Text style={styles.bannerTitle}>Crear Nuevo Documento PDF</Text>
-          <Text style={styles.bannerSubtitle}>
+        <View style={[styles.bannerContainer, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+          <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>Crear Nuevo Documento PDF</Text>
+          <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>
             Escanea con la cámara o selecciona fotos de tu galería sin publicidad ni pagos.
           </Text>
 
           <View style={styles.actionButtonsRow}>
             {/* Gallery Button */}
             <TouchableOpacity
-              style={[styles.actionBtn, styles.galleryBtn]}
+              style={[styles.actionBtn, { backgroundColor: colors.primaryDark, borderColor: colors.primaryLight, borderWidth: 1 }]}
               onPress={handlePickFromGallery}
               activeOpacity={0.85}
             >
@@ -177,7 +151,7 @@ export const HomeScreen: React.FC = () => {
 
             {/* Camera Button */}
             <TouchableOpacity
-              style={[styles.actionBtn, styles.cameraBtn]}
+              style={[styles.actionBtn, { backgroundColor: colors.primary }]}
               onPress={handleTakePhoto}
               activeOpacity={0.85}
             >
@@ -189,24 +163,24 @@ export const HomeScreen: React.FC = () => {
 
         {/* Search & History Header */}
         <View style={styles.historyHeader}>
-          <Text style={styles.historyTitle}>Documentos Recientes</Text>
-          <Text style={styles.historyCount}>{documents.length} archivos</Text>
+          <Text style={[styles.historyTitle, { color: colors.textPrimary }]}>Documentos Recientes</Text>
+          <Text style={[styles.historyCount, { color: colors.primaryLight }]}>{documents.length} archivos</Text>
         </View>
 
         {/* Search Bar */}
         {documents.length > 0 && (
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={18} color={COLORS.textMuted} />
+          <View style={[styles.searchBox, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+            <Ionicons name="search" size={18} color={colors.textMuted} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.textPrimary }]}
               placeholder="Buscar por nombre..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+                <Ionicons name="close-circle" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -230,14 +204,14 @@ export const HomeScreen: React.FC = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={COLORS.primaryLight}
+              tintColor={colors.primaryLight}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="document-text-outline" size={64} color={COLORS.borderLight} />
-              <Text style={styles.emptyTitle}>No hay documentos en tu lista</Text>
-              <Text style={styles.emptySubtitle}>
+              <Ionicons name="document-text-outline" size={64} color={colors.borderLight} />
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No hay documentos en tu lista</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
                 Toca en "Galería" o "Cámara" para escanear tus primeras fotos y crear un PDF.
               </Text>
             </View>
@@ -249,32 +223,23 @@ export const HomeScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
   },
   bannerContainer: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: RADIUS.lg,
+    borderRadius: 20,
     padding: SPACING.md + 4,
     borderWidth: 1,
-    borderColor: COLORS.border,
     marginBottom: SPACING.md,
   },
   bannerTitle: {
-    color: COLORS.textPrimary,
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 4,
   },
   bannerSubtitle: {
-    color: COLORS.textSecondary,
     fontSize: 13,
     lineHeight: 18,
     marginBottom: SPACING.md,
@@ -290,16 +255,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.sm,
     paddingVertical: SPACING.md - 2,
-    borderRadius: RADIUS.md,
+    borderRadius: 14,
     elevation: 3,
-  },
-  galleryBtn: {
-    backgroundColor: COLORS.primaryDark,
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-  },
-  cameraBtn: {
-    backgroundColor: COLORS.primary,
   },
   actionBtnText: {
     color: '#FFF',
@@ -314,29 +271,24 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   historyTitle: {
-    color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
   historyCount: {
-    color: COLORS.primaryLight,
     fontSize: 12,
     fontWeight: '600',
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.cardBg,
-    borderRadius: RADIUS.sm,
+    borderRadius: 10,
     paddingHorizontal: SPACING.md,
     height: 44,
     borderWidth: 1,
-    borderColor: COLORS.border,
     marginBottom: SPACING.md,
   },
   searchInput: {
     flex: 1,
-    color: COLORS.textPrimary,
     marginLeft: SPACING.sm,
     fontSize: 14,
   },
@@ -350,14 +302,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
   },
   emptyTitle: {
-    color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '700',
     marginTop: SPACING.md,
     marginBottom: SPACING.xs,
   },
   emptySubtitle: {
-    color: COLORS.textMuted,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,

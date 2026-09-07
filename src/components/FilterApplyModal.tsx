@@ -1,7 +1,8 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { SPACING, RADIUS } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface FilterApplyModalProps {
   visible: boolean;
@@ -16,25 +17,34 @@ export const FilterApplyModal: React.FC<FilterApplyModalProps> = ({
   onApplyToAll,
   onClose,
 }) => {
+  const { colors } = useTheme();
+
   return (
-    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="color-wand-outline" size={32} color={COLORS.primary} />
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.overlay, { backgroundColor: colors.modalOverlay }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+          <View style={[styles.iconContainer, { backgroundColor: colors.primaryGlow }]}>
+            <Ionicons name="color-wand-outline" size={32} color={colors.primary} />
           </View>
           
-          <Text style={styles.title}>Aplicar Filtro</Text>
-          <Text style={styles.message}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Aplicar Filtro</Text>
+          <Text style={[styles.message, { color: colors.textSecondary }]}>
             ¿Deseas aplicar este filtro a todas las páginas del documento o solo a la actual?
           </Text>
 
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity style={styles.buttonSecondary} onPress={onApplyToOne} activeOpacity={0.8}>
-              <Text style={styles.buttonSecondaryText}>Solo a esta</Text>
-            </TouchableOpacity>
+          <View style={[styles.infoBox, { backgroundColor: colors.primaryGlow }]}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+              Nota: El efecto no se muestra en esta vista previa para mantener la app rápida, pero se aplicará con máxima calidad en el PDF final.
+            </Text>
+          </View>
 
-            <TouchableOpacity style={styles.buttonPrimary} onPress={onApplyToAll} activeOpacity={0.8}>
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity style={[styles.buttonSecondary, { backgroundColor: colors.cardBgElevated, borderColor: colors.border }]} onPress={onApplyToOne} activeOpacity={0.8}>
+              <Text style={[styles.buttonSecondaryText, { color: colors.textPrimary }]}>Solo a esta</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.buttonPrimary, { backgroundColor: colors.primary }]} onPress={onApplyToAll} activeOpacity={0.8}>
               <Text style={styles.buttonPrimaryText}>A todas</Text>
             </TouchableOpacity>
           </View>
@@ -47,42 +57,53 @@ export const FilterApplyModal: React.FC<FilterApplyModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: COLORS.modalOverlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.xl,
   },
-  modalContainer: {
+  modalContent: {
     width: '100%',
-    backgroundColor: COLORS.cardBgElevated,
     borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   iconContainer: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: COLORS.primaryGlow,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    justifyContent: 'center',
+    marginBottom: SPACING.lg,
   },
   title: {
-    color: COLORS.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: SPACING.sm,
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: SPACING.xs,
     textAlign: 'center',
   },
   message: {
-    color: COLORS.textSecondary,
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
     lineHeight: 20,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.xl,
+    gap: 8,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -91,27 +112,23 @@ const styles = StyleSheet.create({
   },
   buttonSecondary: {
     flex: 1,
-    paddingVertical: SPACING.sm + 2,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    paddingVertical: SPACING.md,
     borderRadius: RADIUS.md,
     alignItems: 'center',
+    borderWidth: 1,
   },
   buttonSecondaryText: {
-    color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: '600',
   },
   buttonPrimary: {
     flex: 1,
-    paddingVertical: SPACING.sm + 2,
-    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.md,
     borderRadius: RADIUS.md,
     alignItems: 'center',
   },
   buttonPrimaryText: {
-    color: '#FFFFFF', // White text reads best on neon red
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
   },

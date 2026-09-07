@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageFilterType } from '../types';
-import { COLORS, SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
+import { SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface FilterPickerProps {
   currentFilter: ImageFilterType;
@@ -15,16 +16,18 @@ export const FilterPicker: React.FC<FilterPickerProps> = ({
   onSelectFilter,
   onApplyToAll,
 }) => {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.cardBg, borderTopColor: colors.border }]}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Filtros LibrePDF</Text>
+        <Text style={[styles.title, { color: colors.textSecondary }]}>Filtros LibrePDF</Text>
         {onApplyToAll && (
           <TouchableOpacity
             onPress={() => onApplyToAll(currentFilter)}
             activeOpacity={0.7}
           >
-            <Text style={styles.applyAllText}>Aplicar a todas las páginas</Text>
+            <Text style={[styles.applyAllText, { color: colors.primary }]}>Aplicar a todas las páginas</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -32,25 +35,28 @@ export const FilterPicker: React.FC<FilterPickerProps> = ({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
       >
         {FILTER_PRESETS.map((preset) => {
           const isActive = currentFilter === preset.id;
           return (
             <TouchableOpacity
               key={preset.id}
-              style={[styles.presetCard, isActive && styles.presetCardActive]}
+              style={[
+                styles.filterItem,
+                isActive && { backgroundColor: colors.primaryGlow, borderColor: colors.primary },
+              ]}
               onPress={() => onSelectFilter(preset.id as ImageFilterType)}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
-              <View style={[styles.iconWrapper, isActive && styles.iconWrapperActive]}>
+              <View style={[styles.iconBox, isActive ? { backgroundColor: colors.primary } : { backgroundColor: colors.cardBgElevated }]}>
                 <Ionicons
                   name={preset.icon as any}
                   size={20}
-                  color={isActive ? '#FFF' : COLORS.textSecondary}
+                  color={isActive ? '#FFF' : colors.textSecondary}
                 />
               </View>
-              <Text style={[styles.presetLabel, isActive && styles.presetLabelActive]}>
+              <Text style={[styles.filterLabel, { color: isActive ? colors.primary : colors.textSecondary }]}>
                 {preset.label}
               </Text>
             </TouchableOpacity>
@@ -63,10 +69,8 @@ export const FilterPicker: React.FC<FilterPickerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.cardBg,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   headerRow: {
     flexDirection: 'row',
@@ -76,55 +80,38 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs + 4,
   },
   title: {
-    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   applyAllText: {
-    color: COLORS.primaryLight,
     fontSize: 12,
     fontWeight: '600',
   },
-  scrollContainer: {
+  scrollContent: {
     paddingHorizontal: SPACING.md,
-    gap: SPACING.sm + 4,
+    gap: SPACING.md,
   },
-  presetCard: {
+  filterItem: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.sm + 4,
-    paddingVertical: SPACING.xs + 4,
-    backgroundColor: COLORS.cardBgElevated,
-    borderRadius: RADIUS.sm,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    minWidth: 90,
+    borderColor: 'transparent',
+    width: 76,
   },
-  presetCardActive: {
-    backgroundColor: COLORS.primaryDark,
-    borderColor: COLORS.primaryLight,
-  },
-  iconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: RADIUS.xs,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
-  iconWrapperActive: {
-    backgroundColor: COLORS.primary,
-  },
-  presetLabel: {
+  filterLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
     fontWeight: '600',
-  },
-  presetLabelActive: {
-    color: '#FFF',
-    fontWeight: '700',
+    textAlign: 'center',
   },
 });

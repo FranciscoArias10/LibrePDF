@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SavedPDFDocument } from '../types';
 import { formatFileSize } from '../utils/storage';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { SPACING, RADIUS } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface DocumentCardProps {
   document: SavedPDFDocument;
@@ -18,6 +19,8 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onShare,
   onDelete,
 }) => {
+  const { colors, isDark } = useTheme();
+  
   const formattedDate = new Date(document.createdAt).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'short',
@@ -28,47 +31,47 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
       onPress={onPress}
       activeOpacity={0.85}
     >
-      {/* Icon/Thumbnail Box */}
-      <View style={styles.thumbnailBox}>
-        <Ionicons name="document-text-sharp" size={32} color={COLORS.primaryLight} />
-        <View style={styles.badgeContainer}>
+      <View style={[styles.thumbnailBox, { backgroundColor: colors.cardBgElevated, borderColor: colors.borderLight }]}>
+        <Ionicons name="document-text-sharp" size={32} color={colors.primaryLight} />
+        <View style={[styles.badgeContainer, { backgroundColor: colors.primaryDark, borderColor: colors.primaryLight }]}>
           <Text style={styles.badgeText}>{document.pageCount} págs</Text>
         </View>
       </View>
 
-      {/* Details Container */}
       <View style={styles.infoContainer}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
           {document.title}
         </Text>
-        <Text style={styles.metaText}>{formattedDate}</Text>
+        <Text style={[styles.metaText, { color: colors.textMuted }]}>{formattedDate}</Text>
         <View style={styles.statsRow}>
-          <Text style={styles.sizeTag}>{formatFileSize(document.fileSize)}</Text>
-          <Text style={styles.bullet}>•</Text>
-          <Text style={styles.formatTag}>PDF</Text>
+          <Text style={[styles.sizeTag, { color: colors.textSecondary }]}>{formatFileSize(document.fileSize)}</Text>
+          <Text style={[styles.bullet, { color: colors.textMuted }]}>•</Text>
+          <Text style={[styles.formatTag, { color: colors.primaryLight }]}>PDF</Text>
         </View>
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.actionsGroup}>
         <TouchableOpacity
-          style={styles.actionBtn}
+          style={[styles.actionBtn, { backgroundColor: colors.cardBgElevated }]}
           onPress={onShare}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="share-social-outline" size={20} color={COLORS.primaryLight} />
+          <Ionicons name="share-social-outline" size={20} color={colors.primaryLight} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionBtn, styles.deleteActionBtn]}
+          style={[
+            styles.actionBtn, 
+            { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.25)' : 'rgba(239, 68, 68, 0.12)' }
+          ]}
           onPress={onDelete}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
+          <Ionicons name="trash-outline" size={20} color={colors.accentRed} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -79,34 +82,28 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.cardBg,
     borderRadius: RADIUS.md,
     padding: SPACING.sm + 4,
     marginBottom: SPACING.sm + 4,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   thumbnailBox: {
     width: 56,
     height: 64,
     borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.cardBgElevated,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
     position: 'relative',
   },
   badgeContainer: {
     position: 'absolute',
     bottom: -4,
-    backgroundColor: COLORS.primaryDark,
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 4,
     borderWidth: 0.5,
-    borderColor: COLORS.primaryLight,
   },
   badgeText: {
     color: '#FFF',
@@ -117,13 +114,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 2,
   },
   metaText: {
-    color: COLORS.textMuted,
     fontSize: 12,
     marginBottom: 4,
   },
@@ -133,16 +128,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sizeTag: {
-    color: COLORS.textSecondary,
     fontSize: 11,
     fontWeight: '600',
   },
   bullet: {
-    color: COLORS.textMuted,
     fontSize: 10,
   },
   formatTag: {
-    color: COLORS.primaryLight,
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -156,11 +148,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: RADIUS.xs,
-    backgroundColor: COLORS.cardBgElevated,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  deleteActionBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
 });

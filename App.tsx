@@ -6,7 +6,8 @@ import { RootStackParamList } from './src/types';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { EditorScreen } from './src/screens/EditorScreen';
 import { ViewerScreen } from './src/screens/ViewerScreen';
-import { COLORS } from './src/constants/theme';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { darkTheme } from './src/constants/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -15,15 +16,25 @@ const AppTheme = {
   dark: true,
   colors: {
     ...DefaultTheme.colors,
-    background: COLORS.background,
-    card: COLORS.cardBg,
-    text: COLORS.textPrimary,
-    border: COLORS.border,
-    primary: COLORS.primary,
+    background: darkTheme.background,
+    card: darkTheme.cardBg,
+    text: darkTheme.textPrimary,
+    border: darkTheme.border,
+    primary: darkTheme.primary,
   },
 };
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppNavigator />
+    </ThemeProvider>
+  );
+}
+
+function AppNavigator() {
+  const { colors } = useTheme();
+
   return (
     <NavigationContainer theme={AppTheme}>
       <StatusBar style="light" />
@@ -31,8 +42,8 @@ export default function App() {
         initialRouteName="Home"
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: COLORS.background },
-          animation: 'slide_from_right',
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'fade',
         }}
       >
         <Stack.Screen name="Home" component={HomeScreen} />

@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PageImage } from '../types';
-import { COLORS, SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
+import { SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface PageCardProps {
   page: PageImage;
@@ -29,12 +30,17 @@ export const PageCard = React.memo<PageCardProps>(({
   onMoveUp,
   onMoveDown,
 }) => {
+  const { colors } = useTheme();
   const currentFilterLabel =
     FILTER_PRESETS.find((f) => f.id === page.filter)?.label || 'Original';
 
   return (
     <TouchableOpacity
-      style={[styles.card, isSelected && styles.cardSelected]}
+      style={[
+        styles.card, 
+        { backgroundColor: colors.cardBg, borderColor: colors.border },
+        isSelected && [styles.cardSelected, { borderColor: colors.primary, shadowColor: colors.primary }]
+      ]}
       onPress={() => onSelect(index)}
       activeOpacity={0.9}
     >
@@ -50,25 +56,25 @@ export const PageCard = React.memo<PageCardProps>(({
         />
 
         {/* Page Number Badge */}
-        <View style={styles.pageBadge}>
+        <View style={[styles.pageBadge, { backgroundColor: colors.primary }]}>
           <Text style={styles.pageBadgeText}>{index + 1}</Text>
         </View>
 
         {/* Filter Tag */}
         {page.filter !== 'original' && (
-          <View style={styles.filterTag}>
+          <View style={[styles.filterTag, { borderColor: colors.primary }]}>
             <Ionicons name="color-filter-outline" size={10} color="#FFF" />
-            <Text style={styles.filterTagText}>{currentFilterLabel}</Text>
+            <Text style={[styles.filterTagText, { color: colors.primary }]}>{currentFilterLabel}</Text>
           </View>
         )}
       </View>
 
       {/* Control Buttons Footer */}
-      <View style={styles.actionsBar}>
+      <View style={[styles.actionsBar, { backgroundColor: colors.cardBgElevated, borderTopColor: colors.border }]}>
         {/* Reorder Buttons */}
         <View style={styles.reorderGroup}>
           <TouchableOpacity
-            style={[styles.iconBtn, index === 0 && styles.iconBtnDisabled]}
+            style={[styles.iconBtn, { backgroundColor: colors.cardBg }, index === 0 && styles.iconBtnDisabled]}
             onPress={() => onMoveUp && onMoveUp(index)}
             disabled={index === 0}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -76,12 +82,12 @@ export const PageCard = React.memo<PageCardProps>(({
             <Ionicons
               name="chevron-up"
               size={18}
-              color={index === 0 ? COLORS.textMuted : COLORS.textPrimary}
+              color={index === 0 ? colors.textMuted : colors.textPrimary}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.iconBtn, index === totalPages - 1 && styles.iconBtnDisabled]}
+            style={[styles.iconBtn, { backgroundColor: colors.cardBg }, index === totalPages - 1 && styles.iconBtnDisabled]}
             onPress={() => onMoveDown && onMoveDown(index)}
             disabled={index === totalPages - 1}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -89,27 +95,27 @@ export const PageCard = React.memo<PageCardProps>(({
             <Ionicons
               name="chevron-down"
               size={18}
-              color={index === totalPages - 1 ? COLORS.textMuted : COLORS.textPrimary}
+              color={index === totalPages - 1 ? colors.textMuted : colors.textPrimary}
             />
           </TouchableOpacity>
         </View>
 
         {/* Edit/Crop Button */}
         <TouchableOpacity
-          style={styles.iconBtn}
+          style={[styles.iconBtn, { backgroundColor: colors.cardBg }]}
           onPress={() => onCrop(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="crop" size={16} color={COLORS.primaryLight} />
+          <Ionicons name="crop" size={16} color={colors.primary} />
         </TouchableOpacity>
 
         {/* Rotate Button */}
         <TouchableOpacity
-          style={styles.iconBtn}
+          style={[styles.iconBtn, { backgroundColor: colors.cardBg }]}
           onPress={() => onRotate(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="reload" size={16} color={COLORS.primaryLight} />
+          <Ionicons name="reload" size={16} color={colors.primary} />
         </TouchableOpacity>
 
         {/* Delete Button */}
@@ -118,7 +124,7 @@ export const PageCard = React.memo<PageCardProps>(({
           onPress={() => onDelete(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="trash-outline" size={16} color={COLORS.accentRed} />
+          <Ionicons name="trash-outline" size={16} color={colors.accentRed} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -127,16 +133,12 @@ export const PageCard = React.memo<PageCardProps>(({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.cardBg,
     borderRadius: RADIUS.md,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: COLORS.border,
     marginBottom: SPACING.md,
   },
   cardSelected: {
-    borderColor: COLORS.primaryLight,
-    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -159,7 +161,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SPACING.xs + 2,
     left: SPACING.xs + 2,
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: RADIUS.xs,
@@ -181,10 +182,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: RADIUS.xs,
     borderWidth: 0.5,
-    borderColor: COLORS.primaryLight,
   },
   filterTagText: {
-    color: COLORS.primaryLight,
     fontSize: 10,
     fontWeight: '600',
   },
@@ -194,9 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs + 2,
-    backgroundColor: COLORS.cardBgElevated,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   reorderGroup: {
     flexDirection: 'row',
@@ -206,7 +203,6 @@ const styles = StyleSheet.create({
   iconBtn: {
     padding: SPACING.xs - 2,
     borderRadius: RADIUS.xs,
-    backgroundColor: COLORS.cardBg,
   },
   iconBtnDisabled: {
     opacity: 0.3,

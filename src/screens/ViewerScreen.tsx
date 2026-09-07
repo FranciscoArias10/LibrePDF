@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  StatusBar,
 } from 'react-native';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -17,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SavedPDFDocument, RootStackParamList } from '../types';
 import { formatFileSize, sharePDFDocument, deletePDFDocument } from '../utils/storage';
 import { Header } from '../components/Header';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Viewer'>;
 type ViewerRouteProp = RouteProp<RootStackParamList, 'Viewer'>;
@@ -25,6 +26,7 @@ type ViewerRouteProp = RouteProp<RootStackParamList, 'Viewer'>;
 export const ViewerScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ViewerRouteProp>();
+  const { colors, isDark } = useTheme();
 
   const doc: SavedPDFDocument = route.params.pdfDoc;
 
@@ -77,53 +79,53 @@ export const ViewerScreen: React.FC = () => {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <Header
         title="Documento PDF Creado"
-        showBack
         onBack={() => navigation.navigate('Home')}
       />
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Success Card */}
-        <View style={styles.successCard}>
+        <View style={[styles.successCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <View style={styles.iconCircle}>
-            <Ionicons name="checkmark-circle" size={48} color={COLORS.primaryLight} />
+            <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
           </View>
-          <Text style={styles.successTitle}>¡PDF Generado con Éxito!</Text>
-          <Text style={styles.successSubtitle}>
+          <Text style={[styles.successTitle, { color: colors.textPrimary }]}>¡PDF Generado con Éxito!</Text>
+          <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
             Tu documento ha sido procesado y guardado localmente sin marcas de agua.
           </Text>
         </View>
 
         {/* Document Metadata Card */}
-        <View style={styles.detailsCard}>
+        <View style={[styles.detailsCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
           <View style={styles.docHeaderRow}>
-            <Ionicons name="document-text" size={32} color={COLORS.primaryLight} />
+            <Ionicons name="document-text" size={32} color={colors.primary} />
             <View style={styles.docTitleGroup}>
-              <Text style={styles.docTitle} numberOfLines={1}>
+              <Text style={[styles.docTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                 {doc.title}
               </Text>
-              <Text style={styles.docDate}>{formattedDate}</Text>
+              <Text style={[styles.docDate, { color: colors.textSecondary }]}>{formattedDate}</Text>
             </View>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Páginas</Text>
-              <Text style={styles.statValue}>{doc.pageCount}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Páginas</Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>{doc.pageCount}</Text>
             </View>
 
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Tamaño</Text>
-              <Text style={styles.statValue}>{formatFileSize(doc.fileSize)}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Tamaño</Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>{formatFileSize(doc.fileSize)}</Text>
             </View>
 
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Formato</Text>
-              <Text style={styles.statValue}>PDF Nactivo</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Formato</Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>PDF Nativo</Text>
             </View>
           </View>
         </View>
@@ -132,7 +134,7 @@ export const ViewerScreen: React.FC = () => {
         <View style={styles.actionsContainer}>
           {/* View PDF Button */}
           <TouchableOpacity
-            style={[styles.bigActionBtn, styles.viewBtn]}
+            style={[styles.bigActionBtn, { backgroundColor: colors.primaryDark }]}
             onPress={handleViewPDF}
             activeOpacity={0.85}
           >
@@ -142,35 +144,49 @@ export const ViewerScreen: React.FC = () => {
 
           {/* Share Button */}
           <TouchableOpacity
-            style={[styles.bigActionBtn, styles.shareBtn]}
+            style={[styles.bigActionBtn, { backgroundColor: colors.primary }]}
             onPress={handleShare}
             activeOpacity={0.85}
           >
             <Ionicons name="share-social" size={24} color="#FFF" />
-            <Text style={styles.bigActionBtnText}>Compartir PDF (WhatsApp / Email)</Text>
+            <Text style={styles.bigActionBtnText}>Compartir PDF</Text>
           </TouchableOpacity>
 
           {/* Delete Button */}
           <TouchableOpacity
-            style={[styles.bigActionBtn, styles.deleteBtn]}
+            style={[
+              styles.bigActionBtn, 
+              { 
+                backgroundColor: isDark ? '#1C1C1E' : '#FFF', 
+                borderWidth: 1.5, 
+                borderColor: '#EF4444',
+                elevation: 0,
+              }
+            ]}
             onPress={handleDelete}
             activeOpacity={0.85}
           >
-            <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
-            <Text style={styles.deleteBtnText}>Eliminar Documento</Text>
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Text style={[styles.deleteBtnText, { color: '#EF4444' }]}>Eliminar Documento</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       {/* Back to Home Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: colors.cardBg, borderTopColor: colors.border }]}>
         <TouchableOpacity
-          style={styles.homeBtn}
+          style={[
+            styles.homeBtn, 
+            { 
+              backgroundColor: colors.background, 
+              borderColor: isDark ? '#EF4444' : colors.border 
+            }
+          ]}
           onPress={() => navigation.navigate('Home')}
           activeOpacity={0.85}
         >
-          <Ionicons name="home-outline" size={20} color={COLORS.textPrimary} />
-          <Text style={styles.homeBtnText}>Volver al Inicio</Text>
+          <Ionicons name="home-outline" size={20} color={isDark ? '#FFF' : colors.textPrimary} />
+          <Text style={[styles.homeBtnText, { color: isDark ? '#FFF' : colors.textPrimary }]}>Volver al Inicio</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -180,67 +196,57 @@ export const ViewerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   container: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl,
+    padding: 16,
+    paddingBottom: 24,
   },
   successCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
   },
   iconCircle: {
-    marginBottom: SPACING.sm,
+    alignItems: 'center',
+    marginBottom: 8,
   },
   successTitle: {
-    color: COLORS.textPrimary,
     fontSize: 20,
     fontWeight: '800',
-    marginBottom: 6,
+    marginBottom: 4,
     textAlign: 'center',
   },
   successSubtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   detailsCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.lg,
+    marginBottom: 24,
   },
   docHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm + 4,
+    gap: 12,
   },
   docTitleGroup: {
     flex: 1,
   },
   docTitle: {
-    color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '700',
+    marginBottom: 2,
   },
   docDate: {
-    color: COLORS.textMuted,
     fontSize: 12,
-    marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: SPACING.md,
+    width: '100%',
+    marginVertical: 16,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -248,73 +254,54 @@ const styles = StyleSheet.create({
   },
   statBox: {
     alignItems: 'center',
-    flex: 1,
   },
   statLabel: {
-    color: COLORS.textMuted,
     fontSize: 11,
-    fontWeight: '600',
     textTransform: 'uppercase',
-    marginBottom: 2,
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   statValue: {
-    color: COLORS.primaryLight,
     fontSize: 14,
     fontWeight: '700',
   },
   actionsContainer: {
-    gap: SPACING.md,
+    gap: 16,
   },
   bigActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm + 2,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
     elevation: 3,
-  },
-  viewBtn: {
-    backgroundColor: COLORS.primaryDark,
-  },
-  shareBtn: {
-    backgroundColor: COLORS.primary,
   },
   bigActionBtnText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: '700',
   },
-  deleteBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
   deleteBtnText: {
-    color: COLORS.accentRed,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   footer: {
-    padding: SPACING.md,
-    backgroundColor: COLORS.cardBg,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   homeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.cardBgElevated,
-    paddingVertical: SPACING.md - 2,
-    borderRadius: RADIUS.md,
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   homeBtnText: {
-    color: COLORS.textPrimary,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

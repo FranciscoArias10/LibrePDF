@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -14,10 +16,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { PageImage, PDFSettings, ImageFilterType, RootStackParamList } from '../types';
-import { DEFAULT_PDF_SETTINGS, COLORS, SPACING, RADIUS } from '../constants/theme';
-import { rotateImage, applyFilterToImage } from '../utils/imageProcessor';
+import { DEFAULT_PDF_SETTINGS, SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
+import { rotateImage, applyFilterToImage, getBase64ImageUri } from '../utils/imageProcessor';
 import { generatePDF } from '../utils/pdfGenerator';
 import { savePDFDocument } from '../utils/storage';
+import { useTheme } from '../contexts/ThemeContext';
 import { Header } from '../components/Header';
 import { PageCard } from '../components/PageCard';
 import { FilterPicker } from '../components/FilterPicker';
@@ -31,6 +34,8 @@ type EditorRouteProp = RouteProp<RootStackParamList, 'Editor'>;
 export const EditorScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<EditorRouteProp>();
+  const { colors, isDark } = useTheme();
+  const { width } = useWindowDimensions();
 
   const [pages, setPages] = useState<PageImage[]>(
     route.params?.initialImages || []
@@ -221,7 +226,7 @@ export const EditorScreen: React.FC = () => {
   };
 
   // Confirm and process PDF Generation
-  const handleGeneratePDF = async () => {
+  const handleGeneratePDF = async (settingsToUse: PDFSettings = pdfSettings) => {
     if (pages.length === 0) {
       Alert.alert('Atención', 'Agrega al menos una imagen para generar el PDF');
       return;
@@ -232,13 +237,13 @@ export const EditorScreen: React.FC = () => {
 
     try {
       // 1. Generate PDF file via expo-print
-      const pdfResult = await generatePDF(pages, pdfSettings);
+      const pdfResult = await generatePDF(pages, settingsToUse);
 
       // 2. Save PDF to permanent storage
       const savedDoc = await savePDFDocument(
         pdfResult.uri,
         pdfResult.base64,
-        pdfSettings.documentTitle || 'Documento_Escaneado',
+        settingsToUse.documentTitle || 'Documento_Escaneado',
         pdfResult.pageCount,
         pages[0]?.uri
       );
@@ -257,30 +262,23 @@ export const EditorScreen: React.FC = () => {
   const selectedPage = pages[selectedIndex];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <Header
-        title="Editor de Páginas"
-        subtitle={`${pages.length} páginas seleccionadas`}
-        showBack
+        title="Editor de PDF"
+        subtitle={`${pages.length} página${pages.length !== 1 ? 's' : ''}`}
         onBack={() => navigation.goBack()}
-        rightAction={
-          <TouchableOpacity
-            style={styles.settingsHeaderBtn}
-            onPress={() => setIsSettingsModalVisible(true)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="options-outline" size={22} color={COLORS.primaryLight} />
-          </TouchableOpacity>
-        }
       />
 
-      <View style={styles.container}>
+      <View style={styles.workspace}>
         {/* Quick Add Bar */}
-        <View style={styles.topToolbar}>
-          <Text style={styles.toolbarTitle}>Páginas del PDF</Text>
+        <View style={[styles.topToolbar, { backgroundColor: colors.cardBg, borderBottomColor: colors.border }]}>
+          <Text style={[styles.toolbarTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            {width < 380 ? 'Añadir pág.' : 'Añadir página'}
+          </Text>
           <View style={styles.toolbarActions}>
             <TouchableOpacity
-              style={styles.addBtn}
+              style={[styles.addBtn, { backgroundColor: colors.primaryDark }]}
               onPress={handleAddMoreFromGallery}
               activeOpacity={0.8}
             >
@@ -289,7 +287,7 @@ export const EditorScreen: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.addBtn}
+              style={[styles.addBtn, { backgroundColor: colors.primaryDark }]}
               onPress={handleAddMoreFromCamera}
               activeOpacity={0.8}
             >
@@ -322,15 +320,9 @@ export const EditorScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <View style={styles.emptyEditor}>
-            <Ionicons name="images-outline" size={56} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>No hay páginas en este documento</Text>
-            <TouchableOpacity
-              style={styles.importBtn}
-              onPress={handleAddMoreFromGallery}
-            >
-              <Text style={styles.importBtnText}>Importar Fotos</Text>
-            </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="images-outline" size={56} color={colors.textMuted} />
+            <Text style={{ color: colors.textSecondary, marginTop: SPACING.md }}>No hay páginas</Text>
           </View>
         )}
 
@@ -345,9 +337,9 @@ export const EditorScreen: React.FC = () => {
 
         {/* Bottom Floating Generate PDF Button */}
         {pages.length > 0 && (
-          <View style={styles.footerBar}>
+          <View style={[styles.footerBar, { backgroundColor: colors.cardBg, borderTopColor: colors.border }]}>
             <TouchableOpacity
-              style={styles.generatePDFBtn}
+              style={[styles.generatePDFBtn, { backgroundColor: colors.primary }]}
               onPress={() => setIsSettingsModalVisible(true)}
               activeOpacity={0.85}
               disabled={isGenerating}
@@ -370,10 +362,13 @@ export const EditorScreen: React.FC = () => {
       {/* PDF Settings Modal */}
       <PDFSettingsModal
         visible={isSettingsModalVisible}
-        settings={pdfSettings}
-        onUpdateSettings={setPDFSettings}
+        initialSettings={pdfSettings}
+        onGenerate={(newSettings) => {
+          setPDFSettings(newSettings);
+          setIsSettingsModalVisible(false);
+          handleGeneratePDF(newSettings);
+        }}
         onClose={() => setIsSettingsModalVisible(false)}
-        onConfirmGenerate={handleGeneratePDF}
       />
 
       {/* Custom Image Cropper Modal */}
@@ -403,19 +398,13 @@ export const EditorScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   settingsHeaderBtn: {
     width: 36,
     height: 36,
     borderRadius: RADIUS.xs,
-    backgroundColor: COLORS.cardBgElevated,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -425,12 +414,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.cardBg,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   toolbarTitle: {
-    color: COLORS.textPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -442,7 +428,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: COLORS.primaryDark,
     paddingHorizontal: SPACING.sm + 4,
     paddingVertical: 6,
     borderRadius: RADIUS.xs,
@@ -452,46 +437,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  listContainer: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl,
-  },
-  emptyEditor: {
+  workspace: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.xl,
+  },
+  listContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: 100,
   },
   emptyText: {
-    color: COLORS.textSecondary,
     fontSize: 15,
     marginTop: SPACING.md,
-    marginBottom: SPACING.lg,
   },
   importBtn: {
-    backgroundColor: COLORS.primary,
+    marginTop: SPACING.md,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md - 4,
+    paddingVertical: SPACING.sm + 4,
     borderRadius: RADIUS.md,
   },
   importBtnText: {
     color: '#FFF',
-    fontSize: 15,
-    fontWeight: '700',
   },
   footerBar: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.md - 2,
-    backgroundColor: COLORS.cardBg,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
   generatePDFBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.md - 2,
     borderRadius: RADIUS.md,
     elevation: 4,
