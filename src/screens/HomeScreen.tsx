@@ -20,6 +20,7 @@ import { SavedPDFDocument, PageImage, RootStackParamList } from '../types';
 import { getSavedPDFs, deletePDFDocument, sharePDFDocument } from '../utils/storage';
 import { Header } from '../components/Header';
 import { DocumentCard } from '../components/DocumentCard';
+import { PermissionModal, PermissionType } from '../components/PermissionModal';
 import { SPACING } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -31,6 +32,9 @@ export const HomeScreen: React.FC = () => {
   const [documents, setDocuments] = useState<SavedPDFDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  
+  const [isPermissionModalVisible, setIsPermissionModalVisible] = useState(false);
+  const [permissionType, setPermissionType] = useState<PermissionType>('camera');
 
   const loadDocuments = async () => {
     const docs = await getSavedPDFs();
@@ -50,6 +54,16 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handlePickFromGallery = async () => {
+    const status = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (!status.granted && status.canAskAgain) {
+      setPermissionType('gallery');
+      setIsPermissionModalVisible(true);
+      return;
+    }
+    proceedWithGallery();
+  };
+
+  const proceedWithGallery = async () => {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) return;
@@ -79,6 +93,16 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleTakePhoto = async () => {
+    const status = await ImagePicker.getCameraPermissionsAsync();
+    if (!status.granted && status.canAskAgain) {
+      setPermissionType('camera');
+      setIsPermissionModalVisible(true);
+      return;
+    }
+    proceedWithCamera();
+  };
+
+  const proceedWithCamera = async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) return;
@@ -122,7 +146,7 @@ export const HomeScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <Header 
         title="LibrePDF"
@@ -218,11 +242,30 @@ export const HomeScreen: React.FC = () => {
           }
         />
       </View>
+
+      <PermissionModal
+        visible={isPermissionModalVisible}
+        type={permissionType}
+        onAccept={() => {
+          setIsPermissionModalVisible(false);
+          // Wait briefly for modal to close before launching native picker/camera
+          setTimeout(() => {
+            if (permissionType === 'gallery') proceedWithGallery();
+            if (permissionType === 'camera') proceedWithCamera();
+          }, 300);
+        }}
+        onCancel={() => {
+          setIsPermissionModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     paddingHorizontal: SPACING.md,

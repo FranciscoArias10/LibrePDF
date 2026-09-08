@@ -27,6 +27,7 @@ import { FilterPicker } from '../components/FilterPicker';
 import { PDFSettingsModal } from '../components/PDFSettingsModal';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { FilterApplyModal } from '../components/FilterApplyModal';
+import { PermissionModal, PermissionType } from '../components/PermissionModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Editor'>;
 type EditorRouteProp = RouteProp<RootStackParamList, 'Editor'>;
@@ -47,6 +48,9 @@ export const EditorScreen: React.FC = () => {
   const [hasPromptedFilterToAll, setHasPromptedFilterToAll] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [pendingFilter, setPendingFilter] = useState<ImageFilterType | null>(null);
+
+  const [isPermissionModalVisible, setIsPermissionModalVisible] = useState(false);
+  const [permissionType, setPermissionType] = useState<PermissionType>('camera');
 
   // Image Cropper State
   const [isCropperVisible, setIsCropperVisible] = useState(false);
@@ -173,7 +177,20 @@ export const EditorScreen: React.FC = () => {
 
   // Add more images from gallery
   const handleAddMoreFromGallery = async () => {
+    const status = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (!status.granted && status.canAskAgain) {
+      setPermissionType('gallery');
+      setIsPermissionModalVisible(true);
+      return;
+    }
+    proceedWithGallery();
+  };
+
+  const proceedWithGallery = async () => {
     try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) return;
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
@@ -200,7 +217,20 @@ export const EditorScreen: React.FC = () => {
 
   // Add more image from camera
   const handleAddMoreFromCamera = async () => {
+    const status = await ImagePicker.getCameraPermissionsAsync();
+    if (!status.granted && status.canAskAgain) {
+      setPermissionType('camera');
+      setIsPermissionModalVisible(true);
+      return;
+    }
+    proceedWithCamera();
+  };
+
+  const proceedWithCamera = async () => {
     try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) return;
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         quality: 0.9,
@@ -392,6 +422,22 @@ export const EditorScreen: React.FC = () => {
         onApplyToOne={handleConfirmFilterToOne}
         onApplyToAll={handleConfirmFilterToAll}
         onClose={() => setIsFilterModalVisible(false)}
+      />
+
+      <PermissionModal
+        visible={isPermissionModalVisible}
+        type={permissionType}
+        onAccept={() => {
+          setIsPermissionModalVisible(false);
+          // Wait briefly for modal to close before launching native picker/camera
+          setTimeout(() => {
+            if (permissionType === 'gallery') proceedWithGallery();
+            if (permissionType === 'camera') proceedWithCamera();
+          }, 300);
+        }}
+        onCancel={() => {
+          setIsPermissionModalVisible(false);
+        }}
       />
     </SafeAreaView>
   );
