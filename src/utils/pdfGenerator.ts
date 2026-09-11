@@ -51,12 +51,20 @@ export async function generatePDF(
     const base64Uri = await getBase64ImageUri(img.uri);
     const filterStyle = getCSSFilterStyle(img.filter);
 
+    let transformCss = `rotate(${img.rotation}deg)`;
+    if (img.layoutTransform) {
+      const tx = img.layoutTransform.x * 100;
+      const ty = img.layoutTransform.y * 100;
+      const scale = img.layoutTransform.scale;
+      transformCss = `translate(${tx}vw, ${ty}vh) scale(${scale}) ${transformCss}`;
+    }
+
     return `
       <div class="page">
         <img 
           src="${base64Uri}" 
           class="doc-img" 
-          style="filter: ${filterStyle}; transform: rotate(${img.rotation}deg);" 
+          style="filter: ${filterStyle}; transform: ${transformCss};" 
         />
       </div>
     `;

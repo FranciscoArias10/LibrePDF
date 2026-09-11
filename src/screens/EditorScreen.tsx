@@ -28,6 +28,8 @@ import { PDFSettingsModal } from '../components/PDFSettingsModal';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 import { FilterApplyModal } from '../components/FilterApplyModal';
 import { PermissionModal, PermissionType } from '../components/PermissionModal';
+import { PageLayoutModal } from '../components/PageLayoutModal';
+import { ImageLayoutTransform } from '../types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Editor'>;
 type EditorRouteProp = RouteProp<RootStackParamList, 'Editor'>;
@@ -55,6 +57,10 @@ export const EditorScreen: React.FC = () => {
   // Image Cropper State
   const [isCropperVisible, setIsCropperVisible] = useState(false);
   const [croppingIndex, setCroppingIndex] = useState<number | null>(null);
+
+  // Page Layout State
+  const [isLayoutModalVisible, setIsLayoutModalVisible] = useState(false);
+  const [layoutIndex, setLayoutIndex] = useState<number | null>(null);
 
   // Stable selection handler to prevent re-rendering all PageCards
   const handleSelectPage = useCallback((index: number) => {
@@ -91,6 +97,26 @@ export const EditorScreen: React.FC = () => {
     }
     setIsCropperVisible(false);
     setCroppingIndex(null);
+  };
+
+  // Open Layout Modal
+  const handleLayoutPage = useCallback((index: number) => {
+    setLayoutIndex(index);
+    setIsLayoutModalVisible(true);
+  }, []);
+
+  const handleLayoutSave = (transform: ImageLayoutTransform, newRotation: number) => {
+    if (layoutIndex !== null) {
+      const updated = [...pages];
+      updated[layoutIndex] = {
+        ...updated[layoutIndex],
+        layoutTransform: transform,
+        rotation: newRotation,
+      };
+      setPages(updated);
+    }
+    setIsLayoutModalVisible(false);
+    setLayoutIndex(null);
   };
 
   // Reorder move up
@@ -342,6 +368,7 @@ export const EditorScreen: React.FC = () => {
                 onRotate={handleRotatePage}
                 onDelete={handleDeletePage}
                 onCrop={handleCropPage}
+                onLayout={handleLayoutPage}
                 onMoveUp={handleMoveUp}
                 onMoveDown={handleMoveDown}
               />
@@ -437,6 +464,17 @@ export const EditorScreen: React.FC = () => {
         }}
         onCancel={() => {
           setIsPermissionModalVisible(false);
+        }}
+      />
+
+      {/* Page Layout Modal */}
+      <PageLayoutModal
+        visible={isLayoutModalVisible}
+        page={layoutIndex !== null ? pages[layoutIndex] : null}
+        onSave={handleLayoutSave}
+        onCancel={() => {
+          setIsLayoutModalVisible(false);
+          setLayoutIndex(null);
         }}
       />
     </SafeAreaView>

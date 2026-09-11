@@ -1,5 +1,11 @@
 export type ImageFilterType = 'original' | 'magic_color' | 'grayscale' | 'bw_contrast';
 
+export interface ImageLayoutTransform {
+  x: number; // percentage of canvas width
+  y: number; // percentage of canvas height
+  scale: number;
+}
+
 export interface PageImage {
   id: string;
   uri: string;
@@ -8,6 +14,7 @@ export interface PageImage {
   height: number;
   rotation: number; // 0, 90, 180, 270
   filter: ImageFilterType;
+  layoutTransform?: ImageLayoutTransform;
 }
 
 export type PageSize = 'A4' | 'LETTER' | 'LEGAL' | 'FIT';

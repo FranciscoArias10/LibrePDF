@@ -14,6 +14,7 @@ interface PageCardProps {
   onRotate: (index: number) => void;
   onDelete: (index: number) => void;
   onCrop: (index: number) => void;
+  onLayout: (index: number) => void;
   onMoveUp?: (index: number) => void;
   onMoveDown?: (index: number) => void;
 }
@@ -27,6 +28,7 @@ export const PageCard = React.memo<PageCardProps>(({
   onRotate,
   onDelete,
   onCrop,
+  onLayout,
   onMoveUp,
   onMoveDown,
 }) => {
@@ -111,11 +113,20 @@ export const PageCard = React.memo<PageCardProps>(({
 
         {/* Rotate Button */}
         <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: colors.cardBg }]}
+          style={[styles.iconBtn, { backgroundColor: colors.cardBgElevated }]}
           onPress={() => onRotate(index)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="reload" size={16} color={colors.primary} />
+          <Ionicons name="refresh-outline" size={18} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        {/* Layout Button */}
+        <TouchableOpacity
+          style={[styles.iconBtn, { backgroundColor: colors.cardBgElevated }]}
+          onPress={() => onLayout(index)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="move-outline" size={18} color={colors.textPrimary} />
         </TouchableOpacity>
 
         {/* Delete Button */}
