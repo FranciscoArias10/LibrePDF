@@ -43,6 +43,12 @@
           "cameraPermission": "LibrePDF necesita acceso a tu cámara para escanear documentos."
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "LibrePDF necesita acceso a tu cámara para escanear documentos de forma continua."
+        }
+      ],
       "expo-asset",
       "expo-font"
     ],

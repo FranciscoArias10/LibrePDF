@@ -42,6 +42,7 @@ export interface SavedPDFDocument {
 
 export type RootStackParamList = {
   Home: undefined;
-  Editor: { initialImages?: PageImage[] };
+  Camera: { returnToEditor?: boolean } | undefined;
+  Editor: { initialImages?: PageImage[]; appendedImages?: PageImage[] } | undefined;
   Viewer: { pdfDoc: SavedPDFDocument };
 };

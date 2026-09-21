@@ -6,6 +6,7 @@ import { RootStackParamList } from './src/types';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { EditorScreen } from './src/screens/EditorScreen';
 import { ViewerScreen } from './src/screens/ViewerScreen';
+import { CameraScreen } from './src/screens/CameraScreen';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { darkTheme } from './src/constants/theme';
 
@@ -47,6 +48,11 @@ function AppNavigator() {
         }}
       >
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen
+          name="Camera"
+          component={CameraScreen}
+          options={{ animation: 'slide_from_bottom' }}
+        />
         <Stack.Screen name="Editor" component={EditorScreen} />
         <Stack.Screen name="Viewer" component={ViewerScreen} />
       </Stack.Navigator>

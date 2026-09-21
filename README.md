@@ -48,9 +48,16 @@ Built with **React Native** and **Expo Go**.
 
 - **Expo SDK 57** (100% compatible with the latest **Expo Go** version)
 - **React Native** + **TypeScript**
+- **expo-camera** (Continuous multi-page camera scanning)
 - **expo-image-picker** & **expo-image-manipulator**
 - **expo-print** & **expo-file-system** & **expo-sharing**
 - **React Navigation v7**
+
+---
+
+## 🗺️ Roadmap & Pending Features
+
+Check out [PENDIENTES.md](PENDIENTES.md) for planned features and Google Play Store release checklist.
 
 ---
 
@@ -135,9 +142,16 @@ Desarrollada con **React Native** y **Expo Go**.
 
 - **Expo SDK 57** (Compatible 100% con la versión más reciente de **Expo Go**)
 - **React Native** + **TypeScript**
+- **expo-camera** (Escaneo continuo de páginas con cámara en ráfaga)
 - **expo-image-picker** & **expo-image-manipulator**
 - **expo-print** & **expo-file-system** & **expo-sharing**
 - **React Navigation v7**
+
+---
+
+## 🗺️ Roadmap y Funcionalidades Pendientes
+
+Revisa [PENDIENTES.md](PENDIENTES.md) para ver la lista de tareas pendientes, requisitos de Google Play Store y próximas funciones.
 
 ---
 

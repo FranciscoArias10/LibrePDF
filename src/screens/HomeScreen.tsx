@@ -92,42 +92,8 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleTakePhoto = async () => {
-    const status = await ImagePicker.getCameraPermissionsAsync();
-    if (!status.granted && status.canAskAgain) {
-      setPermissionType('camera');
-      setIsPermissionModalVisible(true);
-      return;
-    }
-    proceedWithCamera();
-  };
-
-  const proceedWithCamera = async () => {
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) return;
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.9,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const page: PageImage = {
-          id: `img_${Date.now()}_0`,
-          uri: asset.uri,
-          originalUri: asset.uri,
-          width: asset.width,
-          height: asset.height,
-          rotation: 0,
-          filter: 'original',
-        };
-        navigation.navigate('Editor', { initialImages: [page] });
-      }
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo abrir la cámara');
-    }
+  const handleTakePhoto = () => {
+    navigation.navigate('Camera', { returnToEditor: false });
   };
 
   const handleDeleteDoc = (doc: SavedPDFDocument) => {
@@ -251,7 +217,7 @@ export const HomeScreen: React.FC = () => {
           // Wait briefly for modal to close before launching native picker/camera
           setTimeout(() => {
             if (permissionType === 'gallery') proceedWithGallery();
-            if (permissionType === 'camera') proceedWithCamera();
+            if (permissionType === 'camera') handleTakePhoto();
           }, 300);
         }}
         onCancel={() => {

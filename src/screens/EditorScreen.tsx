@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -61,6 +61,15 @@ export const EditorScreen: React.FC = () => {
   // Page Layout State
   const [isLayoutModalVisible, setIsLayoutModalVisible] = useState(false);
   const [layoutIndex, setLayoutIndex] = useState<number | null>(null);
+
+  // Append new images from Camera continuous scan
+  useEffect(() => {
+    const appended = route.params?.appendedImages;
+    if (appended && appended.length > 0) {
+      setPages((prev) => [...prev, ...appended]);
+      navigation.setParams({ appendedImages: undefined });
+    }
+  }, [route.params?.appendedImages]);
 
   // Stable selection handler to prevent re-rendering all PageCards
   const handleSelectPage = useCallback((index: number) => {
@@ -241,44 +250,9 @@ export const EditorScreen: React.FC = () => {
     }
   };
 
-  // Add more image from camera
-  const handleAddMoreFromCamera = async () => {
-    const status = await ImagePicker.getCameraPermissionsAsync();
-    if (!status.granted && status.canAskAgain) {
-      setPermissionType('camera');
-      setIsPermissionModalVisible(true);
-      return;
-    }
-    proceedWithCamera();
-  };
-
-  const proceedWithCamera = async () => {
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) return;
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.9,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const newPage: PageImage = {
-          id: `img_${Date.now()}_${pages.length}`,
-          uri: asset.uri,
-          originalUri: asset.uri,
-          width: asset.width,
-          height: asset.height,
-          rotation: 0,
-          filter: 'original',
-        };
-
-        setPages([...pages, newPage]);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-    }
+  // Add more images continuously from camera
+  const handleAddMoreFromCamera = () => {
+    navigation.navigate('Camera', { returnToEditor: true });
   };
 
   // Confirm and process PDF Generation
@@ -459,7 +433,7 @@ export const EditorScreen: React.FC = () => {
           // Wait briefly for modal to close before launching native picker/camera
           setTimeout(() => {
             if (permissionType === 'gallery') proceedWithGallery();
-            if (permissionType === 'camera') proceedWithCamera();
+            if (permissionType === 'camera') handleAddMoreFromCamera();
           }, 300);
         }}
         onCancel={() => {
