@@ -11,6 +11,7 @@ interface DocumentCardProps {
   onPress: () => void;
   onShare: () => void;
   onDelete: () => void;
+  onRename?: () => void;
 }
 
 export const DocumentCard: React.FC<DocumentCardProps> = ({
@@ -18,6 +19,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onPress,
   onShare,
   onDelete,
+  onRename,
 }) => {
   const { colors, isDark } = useTheme();
   
@@ -33,6 +35,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
     <TouchableOpacity
       style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
       onPress={onPress}
+      onLongPress={onRename}
       activeOpacity={0.85}
     >
       <View style={[styles.thumbnailBox, { backgroundColor: colors.cardBgElevated, borderColor: colors.borderLight }]}>
@@ -55,6 +58,16 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
       </View>
 
       <View style={styles.actionsGroup}>
+        {onRename && (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.cardBgElevated }]}
+            onPress={onRename}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="pencil-outline" size={17} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={[styles.actionBtn, { backgroundColor: colors.cardBgElevated }]}
           onPress={onShare}
