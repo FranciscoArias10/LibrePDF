@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   Alert,
   Platform,
   StatusBar,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -16,9 +19,10 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SavedPDFDocument, RootStackParamList } from '../types';
-import { formatFileSize, sharePDFDocument, deletePDFDocument } from '../utils/storage';
+import { formatFileSize, sharePDFDocument, deletePDFDocument, renamePDFDocument } from '../utils/storage';
 import { Header } from '../components/Header';
 import { useTheme } from '../contexts/ThemeContext';
+import { PDFEmbeddedViewer, PDFEmbeddedViewerRef } from '../components/PDFEmbeddedViewer';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Viewer'>;
 type ViewerRouteProp = RouteProp<RootStackParamList, 'Viewer'>;
@@ -29,12 +33,41 @@ export const ViewerScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
 
   const doc: SavedPDFDocument = route.params.pdfDoc;
+  const isNew = route.params?.isNew ?? false;
+  const viewerRef = useRef<PDFEmbeddedViewerRef>(null);
+
+  // Editable document title state
+  const [docTitle, setDocTitle] = useState(doc.title);
+  const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
+  const [newTitleInput, setNewTitleInput] = useState(doc.title);
+
+  // If opened directly from Home (isNew === false), open the reader immediately
+  // If created newly in Editor (isNew === true), show the success buttons first
+  const [isReaderVisible, setIsReaderVisible] = useState(!isNew);
+  const [readerCurrentPage, setReaderCurrentPage] = useState(1);
+  const [readerTotalPages, setReaderTotalPages] = useState(doc.pageCount || 1);
+
+  const handleOpenRename = () => {
+    setNewTitleInput(docTitle);
+    setIsRenameModalVisible(true);
+  };
+
+  const handleConfirmRename = async () => {
+    const cleanTitle = newTitleInput.trim();
+    if (cleanTitle && cleanTitle !== docTitle) {
+      const updated = await renamePDFDocument(doc.id, cleanTitle);
+      if (updated) {
+        setDocTitle(cleanTitle);
+      }
+    }
+    setIsRenameModalVisible(false);
+  };
 
   const handleShare = async () => {
     await sharePDFDocument(doc.uri);
   };
 
-  const handleViewPDF = async () => {
+  const handleOpenExternal = async () => {
     try {
       if (Platform.OS === 'android') {
         const contentUri = await FileSystem.getContentUriAsync(doc.uri);
@@ -47,15 +80,18 @@ export const ViewerScreen: React.FC = () => {
         await sharePDFDocument(doc.uri);
       }
     } catch (error) {
-      console.error('Error opening PDF:', error);
-      Alert.alert('Error', 'No se encontró una aplicación para abrir el PDF.');
+      console.error('Error opening external PDF:', error);
+      Alert.alert(
+        'Aviso',
+        'No se encontró una aplicación externa para abrir el PDF. Puedes visualizarlo directamente con el visor integrado o compartirlo.'
+      );
     }
   };
 
   const handleDelete = () => {
     Alert.alert(
-      'Eliminar PDF',
-      `¿Deseas eliminar "${doc.title}"?`,
+      'Eliminar Documento',
+      `¿Deseas eliminar "${docTitle}" de tu dispositivo?`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -81,68 +117,128 @@ export const ViewerScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
+      {/* Main Screen Header */}
       <Header
-        title="Documento PDF Creado"
+        title="Documento PDF"
         onBack={() => navigation.navigate('Home')}
       />
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Success Card */}
-        <View style={[styles.successCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.successCard,
+            { backgroundColor: colors.cardBg, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.iconCircle}>
-            <Ionicons name="checkmark-circle" size={48} color={colors.primary} />
+            <Ionicons
+              name={isNew ? 'checkmark-circle' : 'document-text'}
+              size={48}
+              color={colors.primary}
+            />
           </View>
-          <Text style={[styles.successTitle, { color: colors.textPrimary }]}>¡PDF Generado con Éxito!</Text>
+          <Text style={[styles.successTitle, { color: colors.textPrimary }]}>
+            {isNew ? '¡PDF Generado con Éxito!' : 'Documento Guardado'}
+          </Text>
           <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
-            Tu documento ha sido procesado y guardado localmente sin marcas de agua.
+            {isNew
+              ? 'Tu documento ha sido procesado y guardado localmente sin marcas de agua.'
+              : 'Este documento se encuentra almacenado localmente en tu dispositivo.'}
           </Text>
         </View>
 
         {/* Document Metadata Card */}
-        <View style={[styles.detailsCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.detailsCard,
+            { backgroundColor: colors.cardBg, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.docHeaderRow}>
             <Ionicons name="document-text" size={32} color={colors.primary} />
-            <View style={styles.docTitleGroup}>
-              <Text style={[styles.docTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                {doc.title}
+            <TouchableOpacity
+              style={styles.docTitleGroup}
+              onPress={handleOpenRename}
+              activeOpacity={0.7}
+            >
+              <View style={styles.titleWithPencilRow}>
+                <Text
+                  style={[styles.docTitle, { color: colors.textPrimary }]}
+                  numberOfLines={1}
+                >
+                  {docTitle}
+                </Text>
+                <Ionicons
+                  name="pencil-outline"
+                  size={15}
+                  color={colors.primary}
+                  style={styles.pencilIcon}
+                />
+              </View>
+              <Text style={[styles.docDate, { color: colors.textSecondary }]}>
+                {formattedDate} • Toca para renombrar
               </Text>
-              <Text style={[styles.docDate, { color: colors.textSecondary }]}>{formattedDate}</Text>
-            </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.renameActionBtn,
+                { backgroundColor: colors.cardBgElevated, borderColor: colors.border },
+              ]}
+              onPress={handleOpenRename}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="pencil" size={17} color={colors.primaryLight} />
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Páginas</Text>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{doc.pageCount}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                Páginas
+              </Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>
+                {doc.pageCount}
+              </Text>
             </View>
 
             <View style={styles.statBox}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Tamaño</Text>
-              <Text style={[styles.statValue, { color: colors.primary }]}>{formatFileSize(doc.fileSize)}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                Tamaño
+              </Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>
+                {formatFileSize(doc.fileSize)}
+              </Text>
             </View>
 
             <View style={styles.statBox}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Formato</Text>
-              <Text style={[styles.statValue, { color: colors.primary }]}>PDF Nativo</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                Formato
+              </Text>
+              <Text style={[styles.statValue, { color: colors.primary }]}>
+                PDF Nativo
+              </Text>
             </View>
           </View>
         </View>
 
-        {/* Main Action Buttons */}
+        {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          {/* View PDF Button */}
+          {/* Button 1: View PDF (Launches the In-App Embedded PDF Viewer) */}
           <TouchableOpacity
             style={[styles.bigActionBtn, { backgroundColor: colors.primaryDark }]}
-            onPress={handleViewPDF}
+            onPress={() => setIsReaderVisible(true)}
             activeOpacity={0.85}
           >
             <Ionicons name="eye-outline" size={24} color="#FFF" />
             <Text style={styles.bigActionBtnText}>Abrir y Ver PDF</Text>
           </TouchableOpacity>
 
-          {/* Share Button */}
+          {/* Button 2: Share PDF Immediately */}
           <TouchableOpacity
             style={[styles.bigActionBtn, { backgroundColor: colors.primary }]}
             onPress={handleShare}
@@ -152,43 +248,338 @@ export const ViewerScreen: React.FC = () => {
             <Text style={styles.bigActionBtnText}>Compartir PDF</Text>
           </TouchableOpacity>
 
-          {/* Delete Button */}
+          {/* Button 3: Delete Document */}
           <TouchableOpacity
             style={[
-              styles.bigActionBtn, 
-              { 
-                backgroundColor: isDark ? '#1C1C1E' : '#FFF', 
-                borderWidth: 1.5, 
+              styles.bigActionBtn,
+              {
+                backgroundColor: isDark ? '#1C1C1E' : '#FFF',
+                borderWidth: 1.5,
                 borderColor: '#EF4444',
                 elevation: 0,
-              }
+              },
             ]}
             onPress={handleDelete}
             activeOpacity={0.85}
           >
             <Ionicons name="trash-outline" size={20} color="#EF4444" />
-            <Text style={[styles.deleteBtnText, { color: '#EF4444' }]}>Eliminar Documento</Text>
+            <Text style={[styles.deleteBtnText, { color: '#EF4444' }]}>
+              Eliminar Documento
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       {/* Back to Home Footer */}
-      <View style={[styles.footer, { backgroundColor: colors.cardBg, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { backgroundColor: colors.cardBg, borderTopColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
           style={[
-            styles.homeBtn, 
-            { 
-              backgroundColor: colors.background, 
-              borderColor: isDark ? '#EF4444' : colors.border 
-            }
+            styles.homeBtn,
+            {
+              backgroundColor: colors.background,
+              borderColor: isDark ? '#374151' : colors.border,
+            },
           ]}
           onPress={() => navigation.navigate('Home')}
           activeOpacity={0.85}
         >
-          <Ionicons name="home-outline" size={20} color={isDark ? '#FFF' : colors.textPrimary} />
-          <Text style={[styles.homeBtnText, { color: isDark ? '#FFF' : colors.textPrimary }]}>Volver al Inicio</Text>
+          <Ionicons
+            name="home-outline"
+            size={20}
+            color={isDark ? '#FFF' : colors.textPrimary}
+          />
+          <Text
+            style={[
+              styles.homeBtnText,
+              { color: isDark ? '#FFF' : colors.textPrimary },
+            ]}
+          >
+            Volver al Inicio
+          </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Fullscreen Modal: In-App Embedded PDF Reader */}
+      <Modal
+        visible={isReaderVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => {
+          if (isNew) {
+            setIsReaderVisible(false);
+          } else {
+            navigation.navigate('Home');
+          }
+        }}
+      >
+        <SafeAreaView
+          style={[styles.readerSafeArea, { backgroundColor: colors.background }]}
+          edges={['top', 'left', 'right', 'bottom']}
+        >
+          <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
+          {/* Reader Header */}
+          <View
+            style={[
+              styles.readerHeader,
+              {
+                backgroundColor: colors.cardBg,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={() => {
+                if (isNew) {
+                  setIsReaderVisible(false);
+                } else {
+                  navigation.navigate('Home');
+                }
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+
+            <View style={styles.readerTitleContainer}>
+              <Text
+                style={[styles.readerTitle, { color: colors.textPrimary }]}
+                numberOfLines={1}
+              >
+                {docTitle}
+              </Text>
+              <Text style={[styles.readerSubtitle, { color: colors.primaryLight }]}>
+                Página {readerCurrentPage} de {readerTotalPages}
+              </Text>
+            </View>
+
+            <View style={styles.readerActions}>
+              {/* Share from Reader */}
+              <TouchableOpacity
+                style={styles.headerBtn}
+                onPress={handleShare}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name="share-social-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </TouchableOpacity>
+
+              {/* Open in external app if desired */}
+              <TouchableOpacity
+                style={styles.headerBtn}
+                onPress={handleOpenExternal}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name="open-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Embedded Viewer Core */}
+          <View style={styles.readerViewerBox}>
+            <PDFEmbeddedViewer
+              ref={viewerRef}
+              pdfUri={doc.uri}
+              initialPage={1}
+              onPageChange={(page, total) => {
+                setReaderCurrentPage(page);
+                if (total) setReaderTotalPages(total);
+              }}
+              onLoadSuccess={(total) => {
+                setReaderTotalPages(total);
+              }}
+              onOpenExternal={handleOpenExternal}
+            />
+
+            {/* Floating Zoom & Page Jump Controls */}
+            <View
+              style={[
+                styles.floatingBar,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(28, 28, 30, 0.94)'
+                    : 'rgba(255, 255, 255, 0.94)',
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              {/* Zoom Out */}
+              <TouchableOpacity
+                style={styles.controlBtn}
+                onPress={() => viewerRef.current?.zoomOut()}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="remove" size={20} color={colors.textPrimary} />
+              </TouchableOpacity>
+
+              {/* Reset / Fit to Width */}
+              <TouchableOpacity
+                style={styles.controlBtn}
+                onPress={() => viewerRef.current?.resetZoom()}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="scan-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Zoom In */}
+              <TouchableOpacity
+                style={styles.controlBtn}
+                onPress={() => viewerRef.current?.zoomIn()}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="add" size={20} color={colors.textPrimary} />
+              </TouchableOpacity>
+
+              <View
+                style={[styles.verticalDivider, { backgroundColor: colors.border }]}
+              />
+
+              {/* Prev Page */}
+              <TouchableOpacity
+                style={[
+                  styles.controlBtn,
+                  readerCurrentPage <= 1 && styles.controlBtnDisabled,
+                ]}
+                onPress={() => viewerRef.current?.prevPage()}
+                disabled={readerCurrentPage <= 1}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={20}
+                  color={
+                    readerCurrentPage <= 1
+                      ? colors.textMuted
+                      : colors.textPrimary
+                  }
+                />
+              </TouchableOpacity>
+
+              {/* Page Pill */}
+              <View
+                style={[
+                  styles.pagePill,
+                  { backgroundColor: colors.background },
+                ]}
+              >
+                <Text
+                  style={[styles.pagePillText, { color: colors.textPrimary }]}
+                >
+                  {readerCurrentPage} / {readerTotalPages}
+                </Text>
+              </View>
+
+              {/* Next Page */}
+              <TouchableOpacity
+                style={[
+                  styles.controlBtn,
+                  readerCurrentPage >= readerTotalPages &&
+                    styles.controlBtnDisabled,
+                ]}
+                onPress={() => viewerRef.current?.nextPage()}
+                disabled={readerCurrentPage >= readerTotalPages}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={
+                    readerCurrentPage >= readerTotalPages
+                      ? colors.textMuted
+                      : colors.textPrimary
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Rename Document Modal */}
+      <Modal
+        visible={isRenameModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsRenameModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.renameModalBackdrop}
+        >
+          <View
+            style={[
+              styles.renameModalCard,
+              { backgroundColor: colors.cardBg, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.renameHeader}>
+              <Ionicons name="pencil" size={22} color={colors.primary} />
+              <Text style={[styles.renameTitle, { color: colors.textPrimary }]}>
+                Renombrar Documento
+              </Text>
+            </View>
+
+            <TextInput
+              style={[
+                styles.renameInput,
+                {
+                  backgroundColor: colors.cardBgElevated,
+                  borderColor: colors.border,
+                  color: colors.textPrimary,
+                },
+              ]}
+              value={newTitleInput}
+              onChangeText={setNewTitleInput}
+              placeholder="Nombre del documento"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              selectTextOnFocus
+            />
+
+            <View style={styles.renameActions}>
+              <TouchableOpacity
+                style={[
+                  styles.renameBtn,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                  },
+                ]}
+                onPress={() => setIsRenameModalVisible(false)}
+              >
+                <Text
+                  style={[styles.renameBtnText, { color: colors.textSecondary }]}
+                >
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.renameBtn, { backgroundColor: colors.primary }]}
+                onPress={handleConfirmRename}
+              >
+                <Text style={[styles.renameBtnText, { color: '#FFF' }]}>
+                  Guardar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -302,6 +693,152 @@ const styles = StyleSheet.create({
   },
   homeBtnText: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+
+  // Fullscreen In-App Reader Styles
+  readerSafeArea: {
+    flex: 1,
+  },
+  readerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  headerBtn: {
+    padding: 4,
+  },
+  readerTitleContainer: {
+    flex: 1,
+  },
+  readerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  readerSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  readerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  readerViewerBox: {
+    flex: 1,
+    position: 'relative',
+  },
+  floatingBar: {
+    position: 'absolute',
+    bottom: 24,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  controlBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlBtnDisabled: {
+    opacity: 0.35,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 20,
+  },
+  pagePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  pagePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  titleWithPencilRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pencilIcon: {
+    marginBottom: 2,
+  },
+  renameActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  renameModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  renameModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  renameHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  renameTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  renameInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 20,
+  },
+  renameActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  renameBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  renameBtnText: {
+    fontSize: 14,
     fontWeight: '600',
   },
 });

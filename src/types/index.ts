@@ -56,5 +56,5 @@ export type RootStackParamList = {
   Home: undefined;
   Camera: { returnToEditor?: boolean } | undefined;
   Editor: { initialImages?: PageImage[]; appendedImages?: PageImage[] } | undefined;
-  Viewer: { pdfDoc: SavedPDFDocument };
+  Viewer: { pdfDoc: SavedPDFDocument; isNew?: boolean };
 };

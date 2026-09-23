@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   StatusBar,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -17,7 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { SavedPDFDocument, PageImage, RootStackParamList } from '../types';
-import { getSavedPDFs, deletePDFDocument, sharePDFDocument } from '../utils/storage';
+import { getSavedPDFs, deletePDFDocument, sharePDFDocument, renamePDFDocument } from '../utils/storage';
 import { Header } from '../components/Header';
 import { DocumentCard } from '../components/DocumentCard';
 import { PermissionModal, PermissionType } from '../components/PermissionModal';
@@ -35,6 +38,10 @@ export const HomeScreen: React.FC = () => {
   
   const [isPermissionModalVisible, setIsPermissionModalVisible] = useState(false);
   const [permissionType, setPermissionType] = useState<PermissionType>('camera');
+
+  const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
+  const [renamingDoc, setRenamingDoc] = useState<SavedPDFDocument | null>(null);
+  const [newDocTitle, setNewDocTitle] = useState('');
 
   const loadDocuments = async () => {
     const docs = await getSavedPDFs();
@@ -105,6 +112,21 @@ export const HomeScreen: React.FC = () => {
 
   const handleShareDoc = async (doc: SavedPDFDocument) => {
     await sharePDFDocument(doc.uri);
+  };
+
+  const handleOpenRename = (doc: SavedPDFDocument) => {
+    setRenamingDoc(doc);
+    setNewDocTitle(doc.title);
+    setIsRenameModalVisible(true);
+  };
+
+  const handleConfirmRename = async () => {
+    if (renamingDoc && newDocTitle.trim()) {
+      await renamePDFDocument(renamingDoc.id, newDocTitle.trim());
+      await loadDocuments();
+    }
+    setIsRenameModalVisible(false);
+    setRenamingDoc(null);
   };
 
   const filteredDocs = documents.filter((doc) =>
@@ -183,9 +205,10 @@ export const HomeScreen: React.FC = () => {
           renderItem={({ item }) => (
             <DocumentCard
               document={item}
-              onPress={() => navigation.navigate('Viewer', { pdfDoc: item })}
+              onPress={() => navigation.navigate('Viewer', { pdfDoc: item, isNew: false })}
               onShare={() => handleShareDoc(item)}
               onDelete={() => handleDeleteDoc(item)}
+              onRename={() => handleOpenRename(item)}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -224,6 +247,79 @@ export const HomeScreen: React.FC = () => {
           setIsPermissionModalVisible(false);
         }}
       />
+
+      {/* Rename Document Modal */}
+      <Modal
+        visible={isRenameModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsRenameModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.renameModalBackdrop}
+        >
+          <View
+            style={[
+              styles.renameModalCard,
+              { backgroundColor: colors.cardBg, borderColor: colors.border },
+            ]}
+          >
+            <View style={styles.renameHeader}>
+              <Ionicons name="pencil" size={22} color={colors.primary} />
+              <Text style={[styles.renameTitle, { color: colors.textPrimary }]}>
+                Renombrar Documento
+              </Text>
+            </View>
+
+            <TextInput
+              style={[
+                styles.renameInput,
+                {
+                  backgroundColor: colors.cardBgElevated,
+                  borderColor: colors.border,
+                  color: colors.textPrimary,
+                },
+              ]}
+              value={newDocTitle}
+              onChangeText={setNewDocTitle}
+              placeholder="Nombre del documento"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              selectTextOnFocus
+            />
+
+            <View style={styles.renameActions}>
+              <TouchableOpacity
+                style={[
+                  styles.renameBtn,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                  },
+                ]}
+                onPress={() => setIsRenameModalVisible(false)}
+              >
+                <Text
+                  style={[styles.renameBtnText, { color: colors.textSecondary }]}
+                >
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.renameBtn, { backgroundColor: colors.primary }]}
+                onPress={handleConfirmRename}
+              >
+                <Text style={[styles.renameBtnText, { color: '#FFF' }]}>
+                  Guardar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -320,5 +416,58 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  renameModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  renameModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  renameHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  renameTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  renameInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 20,
+  },
+  renameActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  renameBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  renameBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

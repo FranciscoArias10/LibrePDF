@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { PageImage, PDFSettings, ImageFilterType, RootStackParamList } from '../types';
-import { DEFAULT_PDF_SETTINGS, SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
+import { DEFAULT_PDF_SETTINGS, generateDefaultDocumentTitle, SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
 import { rotateImage, applyFilterToImage, getBase64ImageUri } from '../utils/imageProcessor';
 import { generatePDF } from '../utils/pdfGenerator';
 import { savePDFDocument } from '../utils/storage';
@@ -45,7 +45,10 @@ export const EditorScreen: React.FC = () => {
     route.params?.initialImages || []
   );
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [pdfSettings, setPDFSettings] = useState<PDFSettings>(DEFAULT_PDF_SETTINGS);
+  const [pdfSettings, setPDFSettings] = useState<PDFSettings>(() => ({
+    ...DEFAULT_PDF_SETTINGS,
+    documentTitle: generateDefaultDocumentTitle(),
+  }));
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasPromptedFilterToAll, setHasPromptedFilterToAll] = useState(false);
@@ -290,22 +293,25 @@ export const EditorScreen: React.FC = () => {
     setIsGenerating(true);
 
     try {
+      const docTitle = settingsToUse.documentTitle?.trim() || generateDefaultDocumentTitle();
+      const finalSettings = { ...settingsToUse, documentTitle: docTitle };
+
       // 1. Generate PDF file via expo-print
-      const pdfResult = await generatePDF(pages, settingsToUse);
+      const pdfResult = await generatePDF(pages, finalSettings);
 
       // 2. Save PDF to permanent storage
       const savedDoc = await savePDFDocument(
         pdfResult.uri,
         pdfResult.base64,
-        settingsToUse.documentTitle || 'Documento_Escaneado',
+        docTitle,
         pdfResult.pageCount,
         pages[0]?.uri
       );
 
       setIsGenerating(false);
 
-      // 3. Navigate to Viewer Screen
-      navigation.replace('Viewer', { pdfDoc: savedDoc });
+      // 3. Navigate to Viewer Screen with isNew: true to show success buttons
+      navigation.replace('Viewer', { pdfDoc: savedDoc, isNew: true });
     } catch (error) {
       setIsGenerating(false);
       console.error('Error creating PDF:', error);
