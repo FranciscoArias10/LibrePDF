@@ -34,10 +34,13 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 ---
 
 ### 📖 Visor Interno de PDF (PDF Reader Embebido)
-- **Prioridad:** Alta
+- **Estado:** ✅ *Implementado*
 - **Descripción:** 
   - Visualizar el archivo PDF generado directamente dentro de LibrePDF sin depender de visores externos del sistema.
-  - Navegación entre páginas, zoom y búsqueda rápida.
+  - Renderizado de alta resolución con Mozilla PDF.js sobre HTML5 Canvas dentro de WebView nativo compatible con Expo Go.
+  - Navegación táctil continua y controles para saltar entre páginas (anterior/siguiente).
+  - Zoom interactivo multi-táctil (pinch-to-zoom hasta 5x) y barra flotante con botones (+, -, ajustar al ancho).
+  - Información detallada del documento (peso, páginas, fecha) y acceso rápido a compartir o abrir externamente.
 
 ---
 
