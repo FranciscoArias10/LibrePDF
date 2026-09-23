@@ -97,11 +97,23 @@ export const FILTER_PRESETS = [
   { id: 'bw_contrast', label: 'B&W Contraste', icon: 'aperture-outline' },
 ] as const;
 
+export function generateDefaultDocumentTitle(): string {
+  const now = new Date();
+  const day = now.getDate().toString().padStart(2, '0');
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const month = months[now.getMonth()];
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+
+  return `LibrePDF ${day} ${month}, ${hours}:${minutes}`;
+}
+
 export const DEFAULT_PDF_SETTINGS = {
   pageSize: 'A4' as const,
   orientation: 'portrait' as const,
   margin: 'none' as const,
   quality: 0.85,
-  documentTitle: 'LibrePDF_Doc',
+  documentTitle: '',
   compressImages: true,
 };
+

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { SavedPDFDocument } from '../types';
+import { generateDefaultDocumentTitle } from '../constants/theme';
 
 const HISTORY_STORAGE_KEY = '@librepdf_saved_documents_v1';
 
@@ -32,7 +33,7 @@ export async function savePDFDocument(
   thumbnailUri?: string
 ): Promise<SavedPDFDocument> {
   const documentId = `pdf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const cleanTitle = title.trim() || 'Documento_Escaneado';
+  const cleanTitle = title?.trim() || generateDefaultDocumentTitle();
   const fileName = `${cleanTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}_${Date.now()}.pdf`;
 
   const destFolder = `${FileSystem.documentDirectory}pdfs/`;
@@ -100,6 +101,35 @@ export async function deletePDFDocument(id: string): Promise<void> {
     await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedList));
   } catch (error) {
     console.error('Error deleting PDF document:', error);
+  }
+}
+
+/**
+ * Rename an existing PDF document in storage history
+ */
+export async function renamePDFDocument(id: string, newTitle: string): Promise<SavedPDFDocument | null> {
+  try {
+    const cleanTitle = newTitle.trim();
+    if (!cleanTitle) return null;
+
+    const list = await getSavedPDFs();
+    let updatedDoc: SavedPDFDocument | null = null;
+
+    const updatedList = list.map((doc) => {
+      if (doc.id === id) {
+        updatedDoc = { ...doc, title: cleanTitle };
+        return updatedDoc;
+      }
+      return doc;
+    });
+
+    if (updatedDoc) {
+      await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedList));
+    }
+    return updatedDoc;
+  } catch (error) {
+    console.error('Error renaming PDF document:', error);
+    return null;
   }
 }
 

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PDFSettings, PageSize, PageOrientation, PageMargin } from '../types';
-import { SPACING, RADIUS } from '../constants/theme';
+import { SPACING, RADIUS, generateDefaultDocumentTitle } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface PDFSettingsModalProps {
@@ -64,7 +64,7 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
                   style={[styles.input, { color: colors.textPrimary }]}
                   value={settings.documentTitle}
                   onChangeText={(text) => setSettings({ ...settings, documentTitle: text })}
-                  placeholder="Ej. Documento_Escaneado"
+                  placeholder={`Ej. ${generateDefaultDocumentTitle()}`}
                   placeholderTextColor={colors.textMuted}
                 />
               </View>
@@ -147,7 +147,13 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
 
           {/* Confirm Button */}
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity style={[styles.generateBtn, { backgroundColor: colors.primary }]} onPress={() => onGenerate(settings)}>
+            <TouchableOpacity
+              style={[styles.generateBtn, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                const finalTitle = settings.documentTitle.trim() || generateDefaultDocumentTitle();
+                onGenerate({ ...settings, documentTitle: finalTitle });
+              }}
+            >
               <Text style={styles.generateBtnText}>Generar PDF</Text>
               <Ionicons name="arrow-forward" size={20} color="#FFF" />
             </TouchableOpacity>
