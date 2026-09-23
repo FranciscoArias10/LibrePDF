@@ -158,29 +158,17 @@ export const ViewerScreen: React.FC = () => {
         >
           <View style={styles.docHeaderRow}>
             <Ionicons name="document-text" size={32} color={colors.primary} />
-            <TouchableOpacity
-              style={styles.docTitleGroup}
-              onPress={handleOpenRename}
-              activeOpacity={0.7}
-            >
-              <View style={styles.titleWithPencilRow}>
-                <Text
-                  style={[styles.docTitle, { color: colors.textPrimary }]}
-                  numberOfLines={1}
-                >
-                  {docTitle}
-                </Text>
-                <Ionicons
-                  name="pencil-outline"
-                  size={15}
-                  color={colors.primary}
-                  style={styles.pencilIcon}
-                />
-              </View>
-              <Text style={[styles.docDate, { color: colors.textSecondary }]}>
-                {formattedDate} • Toca para renombrar
+            <View style={styles.docTitleGroup}>
+              <Text
+                style={[styles.docTitle, { color: colors.textPrimary }]}
+                numberOfLines={1}
+              >
+                {docTitle}
               </Text>
-            </TouchableOpacity>
+              <Text style={[styles.docDate, { color: colors.textSecondary }]}>
+                {formattedDate}
+              </Text>
+            </View>
 
             <TouchableOpacity
               style={[
@@ -190,7 +178,7 @@ export const ViewerScreen: React.FC = () => {
               onPress={handleOpenRename}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="pencil" size={17} color={colors.primaryLight} />
+              <Ionicons name="pencil-outline" size={18} color={colors.primaryLight} />
             </TouchableOpacity>
           </View>
 
@@ -771,14 +759,6 @@ const styles = StyleSheet.create({
   pagePillText: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  titleWithPencilRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pencilIcon: {
-    marginBottom: 2,
   },
   renameActionBtn: {
     width: 36,
