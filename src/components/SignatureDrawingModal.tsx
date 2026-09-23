@@ -54,8 +54,26 @@ export const SignatureDrawingModal: React.FC<SignatureDrawingModalProps> = ({
   const [selectedWidth, setSelectedWidth] = useState(4);
   const [saveAsDefault, setSaveAsDefault] = useState(true);
 
+  // Keep refs to active ink settings to avoid stale closures in PanResponder
+  const selectedColorRef = useRef(selectedColor);
+  const selectedWidthRef = useRef(selectedWidth);
+
   // Keep a ref to the active points to avoid stale closures in gesture callbacks
   const currentPointsRef = useRef<{ x: number; y: number }[]>([]);
+
+  const handleColorChange = (newColor: string) => {
+    setSelectedColor(newColor);
+    selectedColorRef.current = newColor;
+    // Retroactively update all existing strokes so the entire signature reflects the new ink
+    setStrokes((prev) => prev.map((s) => ({ ...s, color: newColor })));
+  };
+
+  const handleWidthChange = (newWidth: number) => {
+    setSelectedWidth(newWidth);
+    selectedWidthRef.current = newWidth;
+    // Retroactively update all existing strokes so the entire signature reflects the new stroke width
+    setStrokes((prev) => prev.map((s) => ({ ...s, width: newWidth })));
+  };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -69,8 +87,8 @@ export const SignatureDrawingModal: React.FC<SignatureDrawingModalProps> = ({
 
         setCurrentStroke({
           path: `M ${locationX.toFixed(1)} ${locationY.toFixed(1)}`,
-          color: selectedColor,
-          width: selectedWidth,
+          color: selectedColorRef.current,
+          width: selectedWidthRef.current,
           points: [pt],
         });
       },
@@ -96,8 +114,8 @@ export const SignatureDrawingModal: React.FC<SignatureDrawingModalProps> = ({
             path: currentPointsRef.current
               .map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`)
               .join(' '),
-            color: selectedColor,
-            width: selectedWidth,
+            color: selectedColorRef.current,
+            width: selectedWidthRef.current,
             points: [...currentPointsRef.current],
           };
 
@@ -157,7 +175,7 @@ export const SignatureDrawingModal: React.FC<SignatureDrawingModalProps> = ({
     ${pathsSvg}
 </svg>`;
 
-    onSave(svgString, selectedColor, saveAsDefault);
+    onSave(svgString, selectedColorRef.current, saveAsDefault);
     handleClear();
   };
 
@@ -249,7 +267,7 @@ export const SignatureDrawingModal: React.FC<SignatureDrawingModalProps> = ({
                     { backgroundColor: c.value },
                     selectedColor === c.value && styles.colorCircleSelected,
                   ]}
-                  onPress={() => setSelectedColor(c.value)}
+                  onPress={() => handleColorChange(c.value)}
                 >
                   {selectedColor === c.value && (
                     <Ionicons name="checkmark" size={16} color="#FFFFFF" />
@@ -274,7 +292,7 @@ export const SignatureDrawingModal: React.FC<SignatureDrawingModalProps> = ({
                       borderColor: colors.primary,
                     },
                   ]}
-                  onPress={() => setSelectedWidth(w.value)}
+                  onPress={() => handleWidthChange(w.value)}
                 >
                   <Text
                     style={[
