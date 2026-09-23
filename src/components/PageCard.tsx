@@ -15,6 +15,7 @@ interface PageCardProps {
   onDelete: (index: number) => void;
   onCrop: (index: number) => void;
   onLayout: (index: number) => void;
+  onSignature?: (index: number) => void;
   onMoveUp?: (index: number) => void;
   onMoveDown?: (index: number) => void;
 }
@@ -29,6 +30,7 @@ export const PageCard = React.memo<PageCardProps>(({
   onDelete,
   onCrop,
   onLayout,
+  onSignature,
   onMoveUp,
   onMoveDown,
 }) => {
@@ -67,6 +69,14 @@ export const PageCard = React.memo<PageCardProps>(({
           <View style={[styles.filterTag, { borderColor: colors.primary }]}>
             <Ionicons name="color-filter-outline" size={10} color="#FFF" />
             <Text style={[styles.filterTagText, { color: colors.primary }]}>{currentFilterLabel}</Text>
+          </View>
+        )}
+
+        {/* Signed Badge */}
+        {page.signature && (
+          <View style={styles.signedBadge}>
+            <Ionicons name="shield-checkmark" size={11} color="#FFFFFF" />
+            <Text style={styles.signedBadgeText}>Firmado</Text>
           </View>
         )}
       </View>
@@ -127,6 +137,22 @@ export const PageCard = React.memo<PageCardProps>(({
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="move-outline" size={18} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        {/* Signature Button */}
+        <TouchableOpacity
+          style={[
+            styles.iconBtn,
+            { backgroundColor: page.signature ? colors.primary + '25' : colors.cardBgElevated },
+          ]}
+          onPress={() => onSignature?.(index)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons
+            name="create-outline"
+            size={18}
+            color={page.signature ? colors.primary : colors.textPrimary}
+          />
         </TouchableOpacity>
 
         {/* Delete Button */}
@@ -220,5 +246,22 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     backgroundColor: 'rgba(239, 68, 68, 0.12)',
+  },
+  signedBadge: {
+    position: 'absolute',
+    bottom: SPACING.xs + 2,
+    left: SPACING.xs + 2,
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: SPACING.xs + 4,
+    paddingVertical: 3,
+    borderRadius: RADIUS.xs,
+  },
+  signedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

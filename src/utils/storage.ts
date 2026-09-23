@@ -135,3 +135,53 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
+
+const SAVED_SIGNATURE_KEY = '@librepdf_saved_signature_v1';
+
+export interface SavedSignature {
+  type: 'drawing' | 'image';
+  data: string; // SVG markup or base64 image
+  color?: string;
+  createdAt: number;
+}
+
+/**
+ * Get user's saved default signature from AsyncStorage
+ */
+export async function getSavedSignature(): Promise<SavedSignature | null> {
+  try {
+    const data = await AsyncStorage.getItem(SAVED_SIGNATURE_KEY);
+    if (!data) return null;
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading saved signature:', error);
+    return null;
+  }
+}
+
+/**
+ * Save user's default signature to AsyncStorage
+ */
+export async function saveSignature(signature: Omit<SavedSignature, 'createdAt'>): Promise<void> {
+  try {
+    const toSave: SavedSignature = {
+      ...signature,
+      createdAt: Date.now(),
+    };
+    await AsyncStorage.setItem(SAVED_SIGNATURE_KEY, JSON.stringify(toSave));
+  } catch (error) {
+    console.error('Error saving signature:', error);
+  }
+}
+
+/**
+ * Delete user's saved default signature
+ */
+export async function deleteSavedSignature(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(SAVED_SIGNATURE_KEY);
+  } catch (error) {
+    console.error('Error deleting saved signature:', error);
+  }
+}
+

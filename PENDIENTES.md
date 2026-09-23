@@ -18,17 +18,18 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 ## 🚀 2. Funcionalidades en Desarrollo / Próximas Versiones
 
 ### 📸 Modo Escaneo Continuo (Cámara en Ráfaga)
-- **Estado:** 🟡 *En desarrollo*
+- **Estado:** ✅ *Implementado*
 - **Descripción:** Capturar múltiples páginas seguidas (foto 1, foto 2, foto 3...) con visor a pantalla completa, contador de páginas capturadas y pase directo al editor sin salir de la cámara.
 
 ---
 
 ### ✍️ Firma Digital en Documentos
-- **Prioridad:** Alta
+- **Estado:** ✅ *Implementado*
 - **Descripción:** 
-  - Panel interactivo para dibujar firmas a mano alzada con el dedo.
-  - Opción de importar una imagen de firma existente (con fondo transparente o eliminación de fondo).
-  - Posicionar, escalar y estampar la firma en cualquier página del PDF antes de exportarlo.
+  - Panel interactivo para dibujar firmas a mano alzada con el dedo (tinta negra, azul, azul marino y grosor regulable).
+  - Opción de importar una imagen de firma existente desde la galería con eliminación de fondo (`mix-blend-mode: multiply`).
+  - Guardado de firma predeterminada en el dispositivo para reutilizarla con 1 toque.
+  - Posicionar, escalar y estampar la firma en cualquier página del PDF con precisión milimétrica y calidad vectorial.
 
 ---
 

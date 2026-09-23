@@ -29,7 +29,8 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 import { FilterApplyModal } from '../components/FilterApplyModal';
 import { PermissionModal, PermissionType } from '../components/PermissionModal';
 import { PageLayoutModal } from '../components/PageLayoutModal';
-import { ImageLayoutTransform } from '../types';
+import { SignatureStampModal } from '../components/SignatureStampModal';
+import { ImageLayoutTransform, SignatureStamp } from '../types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Editor'>;
 type EditorRouteProp = RouteProp<RootStackParamList, 'Editor'>;
@@ -61,6 +62,10 @@ export const EditorScreen: React.FC = () => {
   // Page Layout State
   const [isLayoutModalVisible, setIsLayoutModalVisible] = useState(false);
   const [layoutIndex, setLayoutIndex] = useState<number | null>(null);
+
+  // Signature Stamp State
+  const [isSignatureModalVisible, setIsSignatureModalVisible] = useState(false);
+  const [signatureIndex, setSignatureIndex] = useState<number | null>(null);
 
   // Append new images from Camera continuous scan
   useEffect(() => {
@@ -126,6 +131,25 @@ export const EditorScreen: React.FC = () => {
     }
     setIsLayoutModalVisible(false);
     setLayoutIndex(null);
+  };
+
+  // Open Signature Modal
+  const handleSignaturePage = useCallback((index: number) => {
+    setSignatureIndex(index);
+    setIsSignatureModalVisible(true);
+  }, []);
+
+  const handleSignatureSave = (signature: SignatureStamp | undefined) => {
+    if (signatureIndex !== null) {
+      const updated = [...pages];
+      updated[signatureIndex] = {
+        ...updated[signatureIndex],
+        signature,
+      };
+      setPages(updated);
+    }
+    setIsSignatureModalVisible(false);
+    setSignatureIndex(null);
   };
 
   // Reorder move up
@@ -343,6 +367,7 @@ export const EditorScreen: React.FC = () => {
                 onDelete={handleDeletePage}
                 onCrop={handleCropPage}
                 onLayout={handleLayoutPage}
+                onSignature={handleSignaturePage}
                 onMoveUp={handleMoveUp}
                 onMoveDown={handleMoveDown}
               />
@@ -449,6 +474,17 @@ export const EditorScreen: React.FC = () => {
         onCancel={() => {
           setIsLayoutModalVisible(false);
           setLayoutIndex(null);
+        }}
+      />
+
+      {/* Signature Stamp Modal */}
+      <SignatureStampModal
+        visible={isSignatureModalVisible}
+        page={signatureIndex !== null ? pages[signatureIndex] : null}
+        onSave={handleSignatureSave}
+        onCancel={() => {
+          setIsSignatureModalVisible(false);
+          setSignatureIndex(null);
         }}
       />
     </SafeAreaView>

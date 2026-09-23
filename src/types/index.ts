@@ -6,6 +6,17 @@ export interface ImageLayoutTransform {
   scale: number;
 }
 
+export interface SignatureStamp {
+  id: string;
+  type: 'drawing' | 'image';
+  data: string; // SVG string if drawing, or file URI/base64 if image
+  x: number; // percentage of page width (0 to 1)
+  y: number; // percentage of page height (0 to 1)
+  width: number; // percentage of page width (0 to 1)
+  height: number; // percentage of page height (0 to 1)
+  color?: string; // ink color if drawing
+}
+
 export interface PageImage {
   id: string;
   uri: string;
@@ -15,6 +26,7 @@ export interface PageImage {
   rotation: number; // 0, 90, 180, 270
   filter: ImageFilterType;
   layoutTransform?: ImageLayoutTransform;
+  signature?: SignatureStamp;
 }
 
 export type PageSize = 'A4' | 'LETTER' | 'LEGAL' | 'FIT';

@@ -59,6 +59,31 @@ export async function generatePDF(
       transformCss = `translate(${tx}vw, ${ty}vh) scale(${scale}) ${transformCss}`;
     }
 
+    let signatureHtml = '';
+    if (img.signature) {
+      const sig = img.signature;
+      const left = (sig.x * 100).toFixed(2);
+      const top = (sig.y * 100).toFixed(2);
+      const width = (sig.width * 100).toFixed(2);
+      const height = (sig.height * 100).toFixed(2);
+
+      if (sig.type === 'drawing') {
+        signatureHtml = `
+          <div style="position: absolute; left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%; pointer-events: none; z-index: 10;">
+            ${sig.data}
+          </div>
+        `;
+      } else {
+        const sigBase64 = await getBase64ImageUri(sig.data);
+        signatureHtml = `
+          <img 
+            src="${sigBase64}" 
+            style="position: absolute; left: ${left}%; top: ${top}%; width: ${width}%; height: ${height}%; object-fit: contain; mix-blend-mode: multiply; pointer-events: none; z-index: 10;" 
+          />
+        `;
+      }
+    }
+
     return `
       <div class="page">
         <img 
@@ -66,6 +91,7 @@ export async function generatePDF(
           class="doc-img" 
           style="filter: ${filterStyle}; transform: ${transformCss};" 
         />
+        ${signatureHtml}
       </div>
     `;
   });
@@ -99,6 +125,7 @@ export async function generatePDF(
         .page {
           width: 100vw;
           height: 100vh;
+          position: relative;
           page-break-after: always;
           display: flex;
           align-items: center;
