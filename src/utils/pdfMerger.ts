@@ -1,5 +1,6 @@
 import { PDFDocument } from 'pdf-lib';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as base64js from 'base64-js';
 import { SavedPDFDocument } from '../types';
 import { savePDFDocument } from './storage';
 import { generateDefaultDocumentTitle } from '../constants/theme';
@@ -16,7 +17,7 @@ export interface MergeSourceItem {
 /**
  * Reads a PDF file as Base64 string from local file://, content://, or scoped storage.
  * Handles Expo Go permission restrictions on Android DocumentPicker cache by falling back
- * to React Native's ContentResolver-backed fetch/blob reader.
+ * to React Native's ContentResolver-backed fetch/arrayBuffer reader.
  */
 export async function readPDFBase64(uri: string): Promise<string> {
   // 1. Try standard Expo FileSystem first (works for files in documentDirectory)
@@ -27,28 +28,15 @@ export async function readPDFBase64(uri: string): Promise<string> {
     return base64;
   } catch (fsErr: any) {
     // In Expo Go on Android, DocumentPicker files are placed in host cache which FileSystem blocks.
-    // Fall back to React Native's ContentResolver-backed fetch/blob
+    // Fall back to React Native's ContentResolver-backed fetch
   }
 
-  // 2. Fallback: fetch + blob + FileReader (ContentResolver bypasses Expo Go path sandbox)
+  // 2. Fallback: fetch + arrayBuffer + base64js (bypasses Expo Go path sandbox and avoids Response.blob() warning)
   try {
     const response = await fetch(uri);
-    const blob = await response.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          const commaIndex = reader.result.indexOf(',');
-          const base64 =
-            commaIndex !== -1 ? reader.result.substring(commaIndex + 1) : reader.result;
-          resolve(base64);
-        } else {
-          reject(new Error('No se pudo convertir el PDF a Base64.'));
-        }
-      };
-      reader.onerror = (e) => reject(e);
-      reader.readAsDataURL(blob);
-    });
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    return base64js.fromByteArray(bytes);
   } catch (fetchErr: any) {
     console.error(`[readPDFBase64] Fetch fallback also failed for ${uri}:`, fetchErr);
     throw new Error(`No se pudo leer el archivo PDF: ${fetchErr?.message || 'Permiso denegado'}`);
