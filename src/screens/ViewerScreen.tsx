@@ -65,6 +65,22 @@ export const ViewerScreen: React.FC = () => {
     setIsRenameModalVisible(false);
   };
 
+  const handlePrevPage = () => {
+    if (readerCurrentPage > 1) {
+      const target = readerCurrentPage - 1;
+      setReaderCurrentPage(target);
+      viewerRef.current?.goToPage(target);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (readerCurrentPage < readerTotalPages) {
+      const target = readerCurrentPage + 1;
+      setReaderCurrentPage(target);
+      viewerRef.current?.goToPage(target);
+    }
+  };
+
   const handleShare = async () => {
     await sharePDFDocument(doc.uri);
   };
@@ -427,13 +443,38 @@ export const ViewerScreen: React.FC = () => {
                 />
               </TouchableOpacity>
 
-              {/* Reset / Fit to Width */}
+              {/* Reset / Fit to Width (Shows Zoom % and resets on press) */}
               <TouchableOpacity
-                style={styles.controlBtn}
+                style={[
+                  styles.zoomBadgeBtn,
+                  {
+                    backgroundColor:
+                      zoomScale > 1.05
+                        ? colors.primaryGlow
+                        : isDark
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.05)',
+                    borderColor:
+                      zoomScale > 1.05 ? colors.primaryLight : colors.border,
+                  },
+                ]}
                 onPress={() => viewerRef.current?.resetZoom()}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               >
-                <Ionicons name="scan-outline" size={18} color={colors.primary} />
+                <Text
+                  style={[
+                    styles.zoomBadgeText,
+                    {
+                      color:
+                        zoomScale > 1.05
+                          ? colors.primaryLight
+                          : colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {Math.round(zoomScale * 100)}%
+                </Text>
               </TouchableOpacity>
 
               {/* Zoom In */}
@@ -455,9 +496,10 @@ export const ViewerScreen: React.FC = () => {
                   styles.controlBtn,
                   readerCurrentPage <= 1 && styles.controlBtnDisabled,
                 ]}
-                onPress={() => viewerRef.current?.prevPage()}
+                onPress={handlePrevPage}
                 disabled={readerCurrentPage <= 1}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.6}
+                hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }}
               >
                 <Ionicons
                   name="chevron-back"
@@ -491,9 +533,10 @@ export const ViewerScreen: React.FC = () => {
                   readerCurrentPage >= readerTotalPages &&
                     styles.controlBtnDisabled,
                 ]}
-                onPress={() => viewerRef.current?.nextPage()}
+                onPress={handleNextPage}
                 disabled={readerCurrentPage >= readerTotalPages}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.6}
+                hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }}
               >
                 <Ionicons
                   name="chevron-forward"
@@ -760,6 +803,19 @@ const styles = StyleSheet.create({
   },
   controlBtnDisabled: {
     opacity: 0.35,
+  },
+  zoomBadgeBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   verticalDivider: {
     width: 1,

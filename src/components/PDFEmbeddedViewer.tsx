@@ -147,27 +147,17 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
         webViewRef.current?.postMessage(JSON.stringify({ type: 'ZOOM_RESET' }));
       },
       goToPage: (pageNumber: number) => {
-        if (pageNumber >= 1 && (totalPages === 0 || pageNumber <= totalPages)) {
+        if (pageNumber >= 1) {
           webViewRef.current?.postMessage(
             JSON.stringify({ type: 'GO_TO_PAGE', page: pageNumber })
           );
         }
       },
       nextPage: () => {
-        if (totalPages === 0 || currentPage < totalPages) {
-          const next = currentPage + 1;
-          webViewRef.current?.postMessage(
-            JSON.stringify({ type: 'GO_TO_PAGE', page: next })
-          );
-        }
+        webViewRef.current?.postMessage(JSON.stringify({ type: 'NEXT_PAGE' }));
       },
       prevPage: () => {
-        if (currentPage > 1) {
-          const prev = currentPage - 1;
-          webViewRef.current?.postMessage(
-            JSON.stringify({ type: 'GO_TO_PAGE', page: prev })
-          );
-        }
+        webViewRef.current?.postMessage(JSON.stringify({ type: 'PREV_PAGE' }));
       },
     }));
 
@@ -236,14 +226,20 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             padding: 0;
             -webkit-tap-highlight-color: transparent;
           }
-          html, body {
+          html {
             width: 100%;
-            height: 100%;
+            min-height: 100%;
+            background-color: ${bgColor};
+          }
+          body {
+            width: 100%;
+            min-height: 100%;
             background-color: ${bgColor};
             color: ${textColor};
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow-x: hidden;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
           }
           #pages-wrapper {
             display: flex;
@@ -395,30 +391,8 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
           }
 
           let currentVisiblePage = 1;
-
-          function setupIntersectionObserver(totalPages) {
-            if (activePageObserver) {
-              activePageObserver.disconnect();
-            }
-
-            activePageObserver = new IntersectionObserver((entries) => {
-              entries.forEach((entry) => {
-                if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
-                  const pNum = parseInt(entry.target.dataset.pageNumber, 10);
-                  currentVisiblePage = pNum;
-                  postToApp({
-                    type: 'PAGE_CHANGED',
-                    currentPage: pNum,
-                    totalPages: totalPages
-                  });
-                }
-              });
-            }, {
-              threshold: [0.3]
-            });
-
-            pageElements.forEach((el) => activePageObserver.observe(el));
-          }
+          let isProgrammaticScroll = false;
+          let programmaticScrollTimeout = null;
 
           function applyZoom() {
             const wrapper = document.getElementById('pages-wrapper');
@@ -446,8 +420,84 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             const el = document.getElementById('page-' + pageNum);
             if (el) {
               currentVisiblePage = pageNum;
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              isProgrammaticScroll = true;
+              if (programmaticScrollTimeout) {
+                clearTimeout(programmaticScrollTimeout);
+              }
+              programmaticScrollTimeout = setTimeout(() => {
+                isProgrammaticScroll = false;
+              }, 450);
+
+              const rect = el.getBoundingClientRect();
+              const currentScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+              const targetY = Math.max(0, currentScroll + rect.top - 16);
+
+              try {
+                window.scrollTo({
+                  top: targetY,
+                  behavior: 'smooth'
+                });
+              } catch (e) {
+                window.scrollTo(0, targetY);
+              }
+              document.body.scrollTop = targetY;
+              document.documentElement.scrollTop = targetY;
+
+              postToApp({
+                type: 'PAGE_CHANGED',
+                currentPage: pageNum,
+                totalPages: totalPages
+              });
             }
+          }
+
+          let scrollThrottleTimeout = null;
+          function handleScrollEvent() {
+            if (isProgrammaticScroll) return;
+            if (scrollThrottleTimeout) return;
+            scrollThrottleTimeout = setTimeout(() => {
+              scrollThrottleTimeout = null;
+              if (isProgrammaticScroll) return;
+              updateCurrentVisiblePageFromScroll();
+            }, 60);
+          }
+
+          function updateCurrentVisiblePageFromScroll() {
+            if (!pageElements || pageElements.length === 0) return;
+            const centerY = window.innerHeight / 2;
+            let bestPage = currentVisiblePage;
+            let minDistance = Infinity;
+
+            for (let i = 0; i < pageElements.length; i++) {
+              const el = pageElements[i];
+              const rect = el.getBoundingClientRect();
+              if (rect.top <= centerY && rect.bottom >= centerY) {
+                bestPage = parseInt(el.dataset.pageNumber, 10);
+                break;
+              }
+              const pageCenter = (rect.top + rect.bottom) / 2;
+              const dist = Math.abs(pageCenter - centerY);
+              if (dist < minDistance) {
+                minDistance = dist;
+                bestPage = parseInt(el.dataset.pageNumber, 10);
+              }
+            }
+
+            if (bestPage !== currentVisiblePage) {
+              currentVisiblePage = bestPage;
+              postToApp({
+                type: 'PAGE_CHANGED',
+                currentPage: bestPage,
+                totalPages: totalPages
+              });
+            }
+          }
+
+          function setupIntersectionObserver(totalPages) {
+            window.removeEventListener('scroll', handleScrollEvent);
+            document.removeEventListener('scroll', handleScrollEvent);
+            window.addEventListener('scroll', handleScrollEvent, { passive: true });
+            document.addEventListener('scroll', handleScrollEvent, { passive: true });
           }
 
           // Handle incoming commands from React Native
@@ -508,6 +558,14 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
                 applyZoom();
               } else if (msg.type === 'GO_TO_PAGE') {
                 scrollToPage(msg.page);
+              } else if (msg.type === 'NEXT_PAGE') {
+                if (currentVisiblePage < totalPages) {
+                  scrollToPage(currentVisiblePage + 1);
+                }
+              } else if (msg.type === 'PREV_PAGE') {
+                if (currentVisiblePage > 1) {
+                  scrollToPage(currentVisiblePage - 1);
+                }
               }
             } catch (err) {
               console.error('Error handling command:', err);
