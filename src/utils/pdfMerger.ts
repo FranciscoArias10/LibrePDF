@@ -14,19 +14,93 @@ export interface MergeSourceItem {
 }
 
 /**
- * Reads a PDF file from a local URI and returns its page count
+ * Reads a PDF file as Base64 string from local file://, content://, or scoped storage.
+ * Handles Expo Go permission restrictions on Android DocumentPicker cache by falling back
+ * to React Native's ContentResolver-backed fetch/blob reader.
  */
-export async function getPDFPageCount(uri: string): Promise<number> {
+export async function readPDFBase64(uri: string): Promise<string> {
+  // 1. Try standard Expo FileSystem first (works for files in documentDirectory)
   try {
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
+    return base64;
+  } catch (fsErr: any) {
+    // In Expo Go on Android, DocumentPicker files are placed in host cache which FileSystem blocks.
+    // Fall back to React Native's ContentResolver-backed fetch/blob
+  }
+
+  // 2. Fallback: fetch + blob + FileReader (ContentResolver bypasses Expo Go path sandbox)
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          const commaIndex = reader.result.indexOf(',');
+          const base64 =
+            commaIndex !== -1 ? reader.result.substring(commaIndex + 1) : reader.result;
+          resolve(base64);
+        } else {
+          reject(new Error('No se pudo convertir el PDF a Base64.'));
+        }
+      };
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(blob);
+    });
+  } catch (fetchErr: any) {
+    console.error(`[readPDFBase64] Fetch fallback also failed for ${uri}:`, fetchErr);
+    throw new Error(`No se pudo leer el archivo PDF: ${fetchErr?.message || 'Permiso denegado'}`);
+  }
+}
+
+/**
+ * Reads a PDF file from a URI and returns its page count
+ */
+export async function getPDFPageCount(uri: string): Promise<number> {
+  try {
+    const base64 = await readPDFBase64(uri);
     const doc = await PDFDocument.load(base64, { ignoreEncryption: true });
     return doc.getPageCount();
   } catch (error) {
     console.warn(`Could not read page count for ${uri}:`, error);
     return 1;
   }
+}
+
+/**
+ * Safely copies an external PDF (from DocumentPicker or external storage) into LibrePDF's
+ * internal persistent document directory so it is fully accessible to all modules and preserved.
+ */
+export async function importExternalPDFToLocalStorage(
+  uri: string,
+  originalName: string
+): Promise<{ localUri: string; pageCount: number; fileSize: number }> {
+  const base64Data = await readPDFBase64(uri);
+  const doc = await PDFDocument.load(base64Data, { ignoreEncryption: true });
+  const pageCount = doc.getPageCount();
+
+  const cleanName = (originalName || 'documento.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const targetDir = `${FileSystem.documentDirectory}imported_pdfs/`;
+
+  const dirInfo = await FileSystem.getInfoAsync(targetDir);
+  if (!dirInfo.exists) {
+    await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
+  }
+
+  const localUri = `${targetDir}${Date.now()}_${cleanName}`;
+  await FileSystem.writeAsStringAsync(localUri, base64Data, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const fileInfo = await FileSystem.getInfoAsync(localUri);
+  const fileSize =
+    fileInfo.exists && 'size' in fileInfo
+      ? fileInfo.size
+      : Math.round(base64Data.length * 0.75);
+
+  return { localUri, pageCount, fileSize };
 }
 
 /**
@@ -52,9 +126,7 @@ export async function mergePDFDocuments(
     }
 
     try {
-      const base64Data = await FileSystem.readAsStringAsync(item.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const base64Data = await readPDFBase64(item.uri);
 
       const loadedPdf = await PDFDocument.load(base64Data, {
         ignoreEncryption: true,

@@ -20,7 +20,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { SavedPDFDocument, RootStackParamList } from '../types';
 import { getSavedPDFs } from '../utils/storage';
-import { MergeSourceItem, mergePDFDocuments, getPDFPageCount } from '../utils/pdfMerger';
+import {
+  MergeSourceItem,
+  mergePDFDocuments,
+  getPDFPageCount,
+  importExternalPDFToLocalStorage,
+} from '../utils/pdfMerger';
 import { Header } from '../components/Header';
 import { SPACING, RADIUS, generateDefaultDocumentTitle } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
@@ -42,6 +47,8 @@ export const MergePDFScreen: React.FC = () => {
   // Loading & Progress
   const [isMerging, setIsMerging] = useState(false);
   const [mergeProgressText, setMergeProgressText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importingText, setImportingText] = useState('');
 
   // History Picker Modal State
   const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
@@ -118,24 +125,47 @@ export const MergePDFScreen: React.FC = () => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
+        setIsImporting(true);
         const addedItems: MergeSourceItem[] = [];
 
-        for (const asset of result.assets) {
-          // Calculate page count asynchronously
-          const count = await getPDFPageCount(asset.uri);
-          addedItems.push({
-            id: `device_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            title: asset.name.replace(/\.pdf$/i, ''),
-            uri: asset.uri,
-            pageCount: count,
-            fileSize: asset.size || 0,
-            source: 'device',
-          });
+        for (let i = 0; i < result.assets.length; i++) {
+          const asset = result.assets[i];
+          setImportingText(
+            `Importando "${asset.name}" (${i + 1}/${result.assets.length})...`
+          );
+
+          try {
+            const imported = await importExternalPDFToLocalStorage(
+              asset.uri,
+              asset.name
+            );
+            addedItems.push({
+              id: `device_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              title: asset.name.replace(/\.pdf$/i, ''),
+              uri: imported.localUri,
+              pageCount: imported.pageCount,
+              fileSize: imported.fileSize,
+              source: 'device',
+            });
+          } catch (importErr: any) {
+            console.warn(`Error importing asset ${asset.name}:`, importErr);
+            const count = await getPDFPageCount(asset.uri);
+            addedItems.push({
+              id: `device_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              title: asset.name.replace(/\.pdf$/i, ''),
+              uri: asset.uri,
+              pageCount: count,
+              fileSize: asset.size || 0,
+              source: 'device',
+            });
+          }
         }
 
         setSelectedItems((prev) => [...prev, ...addedItems]);
+        setIsImporting(false);
       }
     } catch (error) {
+      setIsImporting(false);
       console.error('Error picking document from device:', error);
       Alert.alert('Error', 'No se pudo seleccionar el archivo PDF del dispositivo.');
     }
@@ -529,6 +559,26 @@ export const MergePDFScreen: React.FC = () => {
             </Text>
             <Text style={[styles.progressSubtitle, { color: colors.textSecondary }]}>
               {mergeProgressText}
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Importing Progress Modal */}
+      <Modal visible={isImporting} transparent animationType="fade">
+        <View style={[styles.modalOverlay, { backgroundColor: colors.modalOverlay }]}>
+          <View
+            style={[
+              styles.progressCard,
+              { backgroundColor: colors.cardBg, borderColor: colors.border },
+            ]}
+          >
+            <ActivityIndicator size="large" color={colors.secondary} />
+            <Text style={[styles.progressTitle, { color: colors.textPrimary }]}>
+              Cargando Archivo
+            </Text>
+            <Text style={[styles.progressSubtitle, { color: colors.textSecondary }]}>
+              {importingText}
             </Text>
           </View>
         </View>
