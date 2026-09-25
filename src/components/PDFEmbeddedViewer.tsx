@@ -30,6 +30,7 @@ interface PDFEmbeddedViewerProps {
   pdfUri: string;
   initialPage?: number;
   onPageChange?: (currentPage: number, totalPages: number) => void;
+  onZoomChange?: (scale: number) => void;
   onLoadSuccess?: (totalPages: number) => void;
   onLoadError?: (errorMessage: string) => void;
   onOpenExternal?: () => void;
@@ -41,6 +42,7 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
       pdfUri,
       initialPage = 1,
       onPageChange,
+      onZoomChange,
       onLoadSuccess,
       onLoadError,
       onOpenExternal,
@@ -190,6 +192,10 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
           case 'PAGE_CHANGED':
             setCurrentPage(data.currentPage);
             onPageChange?.(data.currentPage, data.totalPages || totalPages);
+            break;
+
+          case 'ZOOM_CHANGED':
+            onZoomChange?.(data.scale);
             break;
 
           case 'STATUS':
@@ -388,6 +394,8 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             });
           }
 
+          let currentVisiblePage = 1;
+
           function setupIntersectionObserver(totalPages) {
             if (activePageObserver) {
               activePageObserver.disconnect();
@@ -395,8 +403,9 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
 
             activePageObserver = new IntersectionObserver((entries) => {
               entries.forEach((entry) => {
-                if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
                   const pNum = parseInt(entry.target.dataset.pageNumber, 10);
+                  currentVisiblePage = pNum;
                   postToApp({
                     type: 'PAGE_CHANGED',
                     currentPage: pNum,
@@ -405,7 +414,7 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
                 }
               });
             }, {
-              threshold: [0.5]
+              threshold: [0.3]
             });
 
             pageElements.forEach((el) => activePageObserver.observe(el));
@@ -415,12 +424,28 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             const wrapper = document.getElementById('pages-wrapper');
             if (wrapper) {
               wrapper.style.transform = 'scale(' + baseScaleMultiplier + ')';
+              if (baseScaleMultiplier > 1.0) {
+                document.body.style.overflowX = 'auto';
+              } else {
+                document.body.style.overflowX = 'hidden';
+              }
+              const pageEl = document.getElementById('page-' + currentVisiblePage);
+              if (pageEl) {
+                setTimeout(() => {
+                  pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 40);
+              }
             }
+            postToApp({
+              type: 'ZOOM_CHANGED',
+              scale: baseScaleMultiplier
+            });
           }
 
           function scrollToPage(pageNum) {
             const el = document.getElementById('page-' + pageNum);
             if (el) {
+              currentVisiblePage = pageNum;
               el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
           }
@@ -473,10 +498,10 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
                   setTimeout(() => scrollToPage(msg.initialPage), 300);
                 }
               } else if (msg.type === 'ZOOM_IN') {
-                baseScaleMultiplier = Math.min(baseScaleMultiplier + 0.25, 3.5);
+                baseScaleMultiplier = Math.min(baseScaleMultiplier + 0.25, 3.0);
                 applyZoom();
               } else if (msg.type === 'ZOOM_OUT') {
-                baseScaleMultiplier = Math.max(baseScaleMultiplier - 0.25, 0.6);
+                baseScaleMultiplier = Math.max(baseScaleMultiplier - 0.25, 1.0);
                 applyZoom();
               } else if (msg.type === 'ZOOM_RESET') {
                 baseScaleMultiplier = 1.0;

@@ -46,6 +46,7 @@ export const ViewerScreen: React.FC = () => {
   const [isReaderVisible, setIsReaderVisible] = useState(!isNew);
   const [readerCurrentPage, setReaderCurrentPage] = useState(1);
   const [readerTotalPages, setReaderTotalPages] = useState(doc.pageCount || 1);
+  const [zoomScale, setZoomScale] = useState(1.0);
 
   const handleOpenRename = () => {
     setNewTitleInput(docTitle);
@@ -386,6 +387,9 @@ export const ViewerScreen: React.FC = () => {
                 setReaderCurrentPage(page);
                 if (total) setReaderTotalPages(total);
               }}
+              onZoomChange={(scale) => {
+                setZoomScale(scale);
+              }}
               onLoadSuccess={(total) => {
                 setReaderTotalPages(total);
               }}
@@ -406,11 +410,19 @@ export const ViewerScreen: React.FC = () => {
             >
               {/* Zoom Out */}
               <TouchableOpacity
-                style={styles.controlBtn}
+                style={[
+                  styles.controlBtn,
+                  zoomScale <= 1.0 && styles.controlBtnDisabled,
+                ]}
                 onPress={() => viewerRef.current?.zoomOut()}
+                disabled={zoomScale <= 1.0}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="remove" size={20} color={colors.textPrimary} />
+                <Ionicons
+                  name="remove"
+                  size={20}
+                  color={zoomScale <= 1.0 ? colors.textMuted : colors.textPrimary}
+                />
               </TouchableOpacity>
 
               {/* Reset / Fit to Width */}
