@@ -174,11 +174,14 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.actionButtonsRow}>
             {/* Gallery Button */}
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.primaryDark, borderColor: colors.primaryLight, borderWidth: 1 }]}
+              style={[
+                styles.actionBtn,
+                { backgroundColor: colors.primaryDark, borderColor: colors.primaryLight, borderWidth: 1 },
+              ]}
               onPress={handlePickFromGallery}
               activeOpacity={0.85}
             >
-              <Ionicons name="images" size={18} color="#FFF" />
+              <Ionicons name="images" size={22} color="#FFF" />
               <Text style={styles.actionBtnText}>Galería</Text>
             </TouchableOpacity>
 
@@ -188,23 +191,36 @@ export const HomeScreen: React.FC = () => {
               onPress={handleTakePhoto}
               activeOpacity={0.85}
             >
-              <Ionicons name="camera" size={18} color="#FFF" />
+              <Ionicons name="camera" size={22} color="#FFF" />
               <Text style={styles.actionBtnText}>Cámara</Text>
             </TouchableOpacity>
-
-            {/* Merge PDF Button */}
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                { backgroundColor: colors.cardBgElevated, borderColor: colors.border, borderWidth: 1 },
-              ]}
-              onPress={() => navigation.navigate('MergePDF')}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="git-merge-outline" size={18} color={colors.secondary} />
-              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Unir PDFs</Text>
-            </TouchableOpacity>
           </View>
+
+          {/* Merge PDF Button (placed below camera and gallery) */}
+          <TouchableOpacity
+            style={[
+              styles.mergeBannerBtn,
+              {
+                backgroundColor: colors.cardBgElevated,
+                borderColor: colors.border,
+              },
+            ]}
+            onPress={() => navigation.navigate('MergePDF')}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.mergeIconBox, { backgroundColor: colors.secondaryGlow }]}>
+              <Ionicons name="git-merge-outline" size={20} color={colors.secondary} />
+            </View>
+            <View style={styles.mergeBtnTexts}>
+              <Text style={[styles.mergeBtnTitle, { color: colors.textPrimary }]}>
+                Combinar y Unir PDFs
+              </Text>
+              <Text style={[styles.mergeBtnSub, { color: colors.textSecondary }]}>
+                Une 2 o más archivos del historial o de tu teléfono
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* Search & History Header */}
@@ -454,22 +470,50 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    gap: SPACING.md,
   },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
-    elevation: 2,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    elevation: 3,
   },
   actionBtnText: {
     color: '#FFF',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
+  },
+  mergeBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: SPACING.sm + 2,
+    gap: SPACING.sm + 2,
+  },
+  mergeIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mergeBtnTexts: {
+    flex: 1,
+  },
+  mergeBtnTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  mergeBtnSub: {
+    fontSize: 12,
+    marginTop: 2,
   },
   historyHeader: {
     flexDirection: 'row',
