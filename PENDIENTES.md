@@ -74,9 +74,14 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 ---
 
 ### 📑 Combinar y Unir PDFs (Merge PDF)
-- **Prioridad:** Baja
+- **Estado:** ✅ *Implementado*
 - **Descripción:** 
-  - Seleccionar dos o más documentos PDF guardados en el historial para fusionarlos en un único archivo PDF.
+  - Seleccionar dos o más documentos PDF guardados en el historial de LibrePDF o desde el almacenamiento del dispositivo (descargas, WhatsApp, Drive, etc.).
+  - Reordenar de forma táctil los documentos antes de la fusión (subir/bajar posición con flechas ▲/▼).
+  - Previsualizar conteo de páginas y tamaño individual y acumulado.
+  - Personalización del nombre de salida del archivo consolidado.
+  - Fusión de alta fidelidad 100% offline y en JavaScript puro (`pdf-lib`) compatible con Expo Go.
+  - Guardado directo en el historial permanente y apertura en el Visor Interno.
 
 ---
 
