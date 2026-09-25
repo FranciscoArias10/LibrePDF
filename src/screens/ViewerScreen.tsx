@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as FileSystem from 'expo-file-system/legacy';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ export const ViewerScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ViewerRouteProp>();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const doc: SavedPDFDocument = route.params.pdfDoc;
   const isNew = route.params?.isNew ?? false;
@@ -405,6 +406,7 @@ export const ViewerScreen: React.FC = () => {
                     ? 'rgba(28, 28, 30, 0.94)'
                     : 'rgba(255, 255, 255, 0.94)',
                   borderColor: colors.border,
+                  bottom: Math.max(insets.bottom + 12, 24),
                 },
               ]}
             >

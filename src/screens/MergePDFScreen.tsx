@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +37,7 @@ export const MergePDFScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<MergeRouteProp>();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   // Selected items to be merged in order
   const [selectedItems, setSelectedItems] = useState<MergeSourceItem[]>([]);
@@ -250,7 +251,7 @@ export const MergePDFScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: colors.background }]}>
       <Header
         title="Unir PDFs"
         onBack={() => navigation.goBack()}
@@ -498,11 +499,15 @@ export const MergePDFScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Floating Bottom Merge Button */}
+      {/* Bottom Merge Button */}
       <View
         style={[
           styles.footerContainer,
-          { backgroundColor: colors.cardBg, borderTopColor: colors.border },
+          {
+            backgroundColor: colors.cardBg,
+            borderTopColor: colors.border,
+            paddingBottom: Math.max(insets.bottom + SPACING.sm, SPACING.md),
+          },
         ]}
       >
         <TouchableOpacity
@@ -598,7 +603,11 @@ export const MergePDFScreen: React.FC = () => {
           <View
             style={[
               styles.historyModalContent,
-              { backgroundColor: colors.cardBg, borderColor: colors.border },
+              {
+                backgroundColor: colors.cardBg,
+                borderColor: colors.border,
+                paddingBottom: Math.max(insets.bottom + SPACING.sm, SPACING.md),
+              },
             ]}
           >
             {/* Modal Header */}
@@ -806,7 +815,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingBottom: 90,
+    paddingBottom: SPACING.md,
   },
   itemCard: {
     flexDirection: 'row',
@@ -903,11 +912,8 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   footerContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
     borderTopWidth: 1,
   },
   mergeSubmitButton: {

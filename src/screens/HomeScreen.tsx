@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,6 +32,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark, toggleTheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [documents, setDocuments] = useState<SavedPDFDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -332,7 +333,11 @@ export const HomeScreen: React.FC = () => {
         <View
           style={[
             styles.selectionFloatingBar,
-            { backgroundColor: colors.cardBg, borderColor: colors.border },
+            {
+              backgroundColor: colors.cardBg,
+              borderColor: colors.border,
+              bottom: Math.max(insets.bottom + 12, 24),
+            },
           ]}
         >
           <Text style={[styles.selectionFloatingText, { color: colors.textPrimary }]}>
