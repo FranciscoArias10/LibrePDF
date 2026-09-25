@@ -57,4 +57,6 @@ export type RootStackParamList = {
   Camera: { returnToEditor?: boolean } | undefined;
   Editor: { initialImages?: PageImage[]; appendedImages?: PageImage[] } | undefined;
   Viewer: { pdfDoc: SavedPDFDocument; isNew?: boolean };
+  MergePDF: { initialDocuments?: SavedPDFDocument[] } | undefined;
 };
+
