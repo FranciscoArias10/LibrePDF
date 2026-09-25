@@ -296,6 +296,7 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
           let activePageObserver = null;
           let isRenderingOrLoaded = false;
           let readyInterval = null;
+          let totalPages = 0;
 
           function postToApp(data) {
             try {
@@ -336,6 +337,7 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             pageElements = [];
 
             const numPages = pdf.numPages;
+            totalPages = numPages;
             const screenWidth = window.innerWidth - 20;
 
             for (let pageNum = 1; pageNum <= numPages; pageNum++) {
@@ -383,10 +385,10 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
               pageElements.push(pageCard);
             }
 
-            setupIntersectionObserver(numPages);
+            setupIntersectionObserver();
             postToApp({
               type: 'DOCUMENT_LOADED',
-              totalPages: numPages
+              totalPages: totalPages
             });
           }
 
@@ -493,7 +495,7 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             }
           }
 
-          function setupIntersectionObserver(totalPages) {
+          function setupIntersectionObserver() {
             window.removeEventListener('scroll', handleScrollEvent);
             document.removeEventListener('scroll', handleScrollEvent);
             window.addEventListener('scroll', handleScrollEvent, { passive: true });
