@@ -12,6 +12,9 @@ interface DocumentCardProps {
   onShare: () => void;
   onDelete: () => void;
   onRename?: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectToggle?: () => void;
 }
 
 export const DocumentCard: React.FC<DocumentCardProps> = ({
@@ -20,6 +23,9 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onShare,
   onDelete,
   onRename,
+  selectable = false,
+  selected = false,
+  onSelectToggle,
 }) => {
   const { colors, isDark } = useTheme();
   
@@ -33,11 +39,25 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
-      onPress={onPress}
-      onLongPress={onRename}
+      style={[
+        styles.card,
+        { backgroundColor: colors.cardBg, borderColor: selected ? colors.primaryLight : colors.border },
+        selected && { backgroundColor: colors.primaryGlow },
+      ]}
+      onPress={selectable ? (onSelectToggle || onPress) : onPress}
+      onLongPress={selectable ? undefined : onRename}
       activeOpacity={0.85}
     >
+      {selectable && (
+        <View style={styles.selectionCheckbox}>
+          <Ionicons
+            name={selected ? 'checkbox' : 'square-outline'}
+            size={24}
+            color={selected ? colors.primaryLight : colors.textMuted}
+          />
+        </View>
+      )}
+
       <View style={[styles.thumbnailBox, { backgroundColor: colors.cardBgElevated, borderColor: colors.borderLight }]}>
         <Ionicons name="document-text-sharp" size={32} color={colors.primaryLight} />
         <View style={[styles.badgeContainer, { backgroundColor: colors.primaryDark, borderColor: colors.primaryLight }]}>
@@ -164,4 +184,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  selectionCheckbox: {
+    marginRight: SPACING.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
+

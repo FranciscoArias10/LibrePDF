@@ -43,6 +43,27 @@ export const HomeScreen: React.FC = () => {
   const [renamingDoc, setRenamingDoc] = useState<SavedPDFDocument | null>(null);
   const [newDocTitle, setNewDocTitle] = useState('');
 
+  // Multi-selection mode for merging PDFs
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
+
+  const handleToggleSelect = (id: string) => {
+    const next = new Set(selectedDocIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedDocIds(next);
+  };
+
+  const handleMergeSelected = () => {
+    const selected = documents.filter((doc) => selectedDocIds.has(doc.id));
+    setIsSelectionMode(false);
+    setSelectedDocIds(new Set());
+    navigation.navigate('MergePDF', { initialDocuments: selected });
+  };
+
   const loadDocuments = async () => {
     const docs = await getSavedPDFs();
     setDocuments(docs);
@@ -145,9 +166,9 @@ export const HomeScreen: React.FC = () => {
       <View style={styles.container}>
         {/* Quick Action CamScanner Banner */}
         <View style={[styles.bannerContainer, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
-          <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>Crear Nuevo Documento PDF</Text>
+          <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>Crear y Gestionar PDFs</Text>
           <Text style={[styles.bannerSubtitle, { color: colors.textSecondary }]}>
-            Escanea con la cámara o selecciona fotos de tu galería sin publicidad ni pagos.
+            Escanea con tu cámara, elige fotos o une múltiples PDFs sin publicidad ni límites.
           </Text>
 
           <View style={styles.actionButtonsRow}>
@@ -157,8 +178,8 @@ export const HomeScreen: React.FC = () => {
               onPress={handlePickFromGallery}
               activeOpacity={0.85}
             >
-              <Ionicons name="images" size={24} color="#FFF" />
-              <Text style={styles.actionBtnText}>Galeria</Text>
+              <Ionicons name="images" size={18} color="#FFF" />
+              <Text style={styles.actionBtnText}>Galería</Text>
             </TouchableOpacity>
 
             {/* Camera Button */}
@@ -167,16 +188,65 @@ export const HomeScreen: React.FC = () => {
               onPress={handleTakePhoto}
               activeOpacity={0.85}
             >
-              <Ionicons name="camera" size={24} color="#FFF" />
+              <Ionicons name="camera" size={18} color="#FFF" />
               <Text style={styles.actionBtnText}>Cámara</Text>
+            </TouchableOpacity>
+
+            {/* Merge PDF Button */}
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                { backgroundColor: colors.cardBgElevated, borderColor: colors.border, borderWidth: 1 },
+              ]}
+              onPress={() => navigation.navigate('MergePDF')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="git-merge-outline" size={18} color={colors.secondary} />
+              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Unir PDFs</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Search & History Header */}
         <View style={styles.historyHeader}>
-          <Text style={[styles.historyTitle, { color: colors.textPrimary }]}>Documentos Recientes</Text>
-          <Text style={[styles.historyCount, { color: colors.primaryLight }]}>{documents.length} archivos</Text>
+          <View>
+            <Text style={[styles.historyTitle, { color: colors.textPrimary }]}>Documentos Recientes</Text>
+            <Text style={[styles.historyCount, { color: colors.primaryLight }]}>{documents.length} archivos</Text>
+          </View>
+          {documents.length > 1 && (
+            <TouchableOpacity
+              style={[
+                styles.selectModeToggle,
+                {
+                  backgroundColor: isSelectionMode ? colors.primaryGlow : colors.cardBgElevated,
+                  borderColor: isSelectionMode ? colors.primaryLight : colors.border,
+                },
+              ]}
+              onPress={() => {
+                if (isSelectionMode) {
+                  setIsSelectionMode(false);
+                  setSelectedDocIds(new Set());
+                } else {
+                  setIsSelectionMode(true);
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={isSelectionMode ? 'close' : 'checkbox-outline'}
+                size={15}
+                color={isSelectionMode ? colors.primaryLight : colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.selectModeText,
+                  { color: isSelectionMode ? colors.primaryLight : colors.textSecondary },
+                ]}
+              >
+                {isSelectionMode ? 'Cancelar' : 'Seleccionar'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Search Bar */}
@@ -205,7 +275,16 @@ export const HomeScreen: React.FC = () => {
           renderItem={({ item }) => (
             <DocumentCard
               document={item}
-              onPress={() => navigation.navigate('Viewer', { pdfDoc: item, isNew: false })}
+              selectable={isSelectionMode}
+              selected={selectedDocIds.has(item.id)}
+              onSelectToggle={() => handleToggleSelect(item.id)}
+              onPress={() => {
+                if (isSelectionMode) {
+                  handleToggleSelect(item.id);
+                } else {
+                  navigation.navigate('Viewer', { pdfDoc: item, isNew: false });
+                }
+              }}
               onShare={() => handleShareDoc(item)}
               onDelete={() => handleDeleteDoc(item)}
               onRename={() => handleOpenRename(item)}
@@ -231,6 +310,30 @@ export const HomeScreen: React.FC = () => {
           }
         />
       </View>
+
+      {/* Floating Bottom Selection Bar */}
+      {isSelectionMode && selectedDocIds.size > 0 && (
+        <View
+          style={[
+            styles.selectionFloatingBar,
+            { backgroundColor: colors.cardBg, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.selectionFloatingText, { color: colors.textPrimary }]}>
+            {selectedDocIds.size} {selectedDocIds.size === 1 ? 'PDF seleccionado' : 'PDFs seleccionados'}
+          </Text>
+          <TouchableOpacity
+            style={[styles.selectionFloatingBtn, { backgroundColor: colors.primary }]}
+            onPress={handleMergeSelected}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="git-merge-outline" size={18} color="#FFF" />
+            <Text style={styles.selectionFloatingBtnText}>
+              Unir ({selectedDocIds.size})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <PermissionModal
         visible={isPermissionModalVisible}
@@ -351,21 +454,21 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.sm,
   },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.md - 2,
-    borderRadius: 14,
-    elevation: 3,
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    elevation: 2,
   },
   actionBtnText: {
     color: '#FFF',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
   },
   historyHeader: {
@@ -382,6 +485,54 @@ const styles = StyleSheet.create({
   historyCount: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  selectModeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+  },
+  selectModeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  selectionFloatingBar: {
+    position: 'absolute',
+    bottom: 24,
+    left: SPACING.md,
+    right: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  selectionFloatingText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  selectionFloatingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  selectionFloatingBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   searchBox: {
     flexDirection: 'row',
