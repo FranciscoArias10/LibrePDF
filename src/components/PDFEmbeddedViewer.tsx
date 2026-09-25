@@ -217,7 +217,7 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
       <html lang="es">
       <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <title>LibrePDF Embedded Viewer</title>
         <style>
           * {
@@ -248,8 +248,9 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             padding: 16px 8px 84px 8px;
             gap: 16px;
             transform-origin: top center;
-            transition: transform 0.15s ease-out;
+            transition: transform 0.08s ease-out;
             min-height: 100vh;
+            width: 100%;
           }
           .page-card {
             background-color: #FFFFFF;
@@ -396,7 +397,8 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
           let isProgrammaticScroll = false;
           let programmaticScrollTimeout = null;
 
-          function applyZoom() {
+          function applyZoom(centerPage) {
+            baseScaleMultiplier = Math.max(1.0, Math.min(3.0, baseScaleMultiplier));
             const wrapper = document.getElementById('pages-wrapper');
             if (wrapper) {
               wrapper.style.transform = 'scale(' + baseScaleMultiplier + ')';
@@ -404,12 +406,16 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
                 document.body.style.overflowX = 'auto';
               } else {
                 document.body.style.overflowX = 'hidden';
+                document.body.scrollLeft = 0;
+                window.scrollTo({ left: 0 });
               }
-              const pageEl = document.getElementById('page-' + currentVisiblePage);
-              if (pageEl) {
-                setTimeout(() => {
-                  pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 40);
+              if (centerPage) {
+                const pageEl = document.getElementById('page-' + currentVisiblePage);
+                if (pageEl) {
+                  setTimeout(() => {
+                    pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 40);
+                }
               }
             }
             postToApp({
@@ -417,6 +423,50 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
               scale: baseScaleMultiplier
             });
           }
+
+          // Two-finger pinch-to-zoom with strict limits: 1.0x (100% min) to 3.0x (300% max)
+          let initialPinchDistance = null;
+          let initialPinchScale = 1.0;
+
+          function getTouchDistance(t1, t2) {
+            const dx = t1.clientX - t2.clientX;
+            const dy = t1.clientY - t2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+          }
+
+          document.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+              initialPinchDistance = getTouchDistance(e.touches[0], e.touches[1]);
+              initialPinchScale = baseScaleMultiplier;
+            }
+          }, { passive: true });
+
+          document.addEventListener('touchmove', function(e) {
+            if (e.touches.length === 2 && initialPinchDistance) {
+              const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+              if (currentDistance > 0) {
+                const ratio = currentDistance / initialPinchDistance;
+                let nextScale = initialPinchScale * ratio;
+                // Strict bounds: 1.0x (100% minimum) and 3.0x (300% maximum)
+                nextScale = Math.max(1.0, Math.min(3.0, nextScale));
+                nextScale = Math.round(nextScale * 100) / 100;
+                if (Math.abs(nextScale - baseScaleMultiplier) >= 0.02) {
+                  baseScaleMultiplier = nextScale;
+                  applyZoom(false);
+                }
+              }
+            }
+          }, { passive: true });
+
+          document.addEventListener('touchend', function(e) {
+            if (e.touches.length < 2) {
+              initialPinchDistance = null;
+              if (baseScaleMultiplier <= 1.02) {
+                baseScaleMultiplier = 1.0;
+                applyZoom(false);
+              }
+            }
+          }, { passive: true });
 
           function scrollToPage(pageNum) {
             const el = document.getElementById('page-' + pageNum);
@@ -551,13 +601,13 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
                 }
               } else if (msg.type === 'ZOOM_IN') {
                 baseScaleMultiplier = Math.min(baseScaleMultiplier + 0.25, 3.0);
-                applyZoom();
+                applyZoom(true);
               } else if (msg.type === 'ZOOM_OUT') {
                 baseScaleMultiplier = Math.max(baseScaleMultiplier - 0.25, 1.0);
-                applyZoom();
+                applyZoom(true);
               } else if (msg.type === 'ZOOM_RESET') {
                 baseScaleMultiplier = 1.0;
-                applyZoom();
+                applyZoom(true);
               } else if (msg.type === 'GO_TO_PAGE') {
                 scrollToPage(msg.page);
               } else if (msg.type === 'NEXT_PAGE') {
@@ -611,7 +661,8 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
           allowFileAccess={true}
           allowFileAccessFromFileURLs={true}
           allowUniversalAccessFromFileURLs={true}
-          scalesPageToFit={true}
+          scalesPageToFit={false}
+          setBuiltInZoomControls={false}
           onMessage={handleMessage}
           onLoadEnd={() => {
             sendDocumentToWebView();
