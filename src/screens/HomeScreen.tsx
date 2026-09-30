@@ -305,6 +305,7 @@ export const HomeScreen: React.FC = () => {
               onShare={() => handleShareDoc(item)}
               onDelete={() => handleDeleteDoc(item)}
               onRename={() => handleOpenRename(item)}
+              onEdit={() => navigation.navigate('EditPDF', { document: item })}
             />
           )}
           contentContainerStyle={styles.listContent}

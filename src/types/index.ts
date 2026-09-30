@@ -52,11 +52,22 @@ export interface SavedPDFDocument {
   thumbnailUri?: string;
 }
 
+export interface EditablePDFPage {
+  id: string;
+  type: 'existing' | 'new_image';
+  originalPageIndex: number; // 0-based index in source PDF
+  originalPageNumber: number; // 1-based index (e.g. 1, 2, 3...)
+  thumbnailUri?: string; // Image base64 or file URI
+  imageUri?: string; // If new_image, local file URI
+  rotation: number; // 0, 90, 180, 270
+}
+
 export type RootStackParamList = {
   Home: undefined;
-  Camera: { returnToEditor?: boolean } | undefined;
+  Camera: { returnToEditor?: boolean; returnToEditPDF?: boolean } | undefined;
   Editor: { initialImages?: PageImage[]; appendedImages?: PageImage[] } | undefined;
   Viewer: { pdfDoc: SavedPDFDocument; isNew?: boolean };
   MergePDF: { initialDocuments?: SavedPDFDocument[] } | undefined;
+  EditPDF: { document: SavedPDFDocument; appendedImages?: PageImage[] };
 };
 

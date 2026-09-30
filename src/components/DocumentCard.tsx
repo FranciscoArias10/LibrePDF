@@ -12,6 +12,7 @@ interface DocumentCardProps {
   onShare: () => void;
   onDelete: () => void;
   onRename?: () => void;
+  onEdit?: () => void;
   selectable?: boolean;
   selected?: boolean;
   onSelectToggle?: () => void;
@@ -23,6 +24,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onShare,
   onDelete,
   onRename,
+  onEdit,
   selectable = false,
   selected = false,
   onSelectToggle,
@@ -78,6 +80,16 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
       </View>
 
       <View style={styles.actionsGroup}>
+        {onEdit && (
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.cardBgElevated }]}
+            onPress={onEdit}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="albums-outline" size={17} color={colors.primaryLight} />
+          </TouchableOpacity>
+        )}
+
         {onRename && (
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: colors.cardBgElevated }]}

@@ -60,9 +60,15 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 ---
 
 ### 📝 Edición de PDFs Existentes
-- **Prioridad:** Media
+- **Estado:** ✅ *Implementado*
 - **Descripción:** 
-  - Abrir un PDF ya guardado en el historial para agregar nuevas páginas tomadas con la cámara o galería, o eliminar páginas existentes.
+  - Abrir cualquier documento PDF guardado en el historial o importado desde la tarjeta del documento o el visor interno.
+  - Eliminar hojas individuales de forma interactiva con confirmación y prevención de documento vacío.
+  - Agregar nuevas páginas utilizando la cámara en ráfaga (escaneo continuo) o seleccionando fotos múltiples de la galería.
+  - Reordenar libremente la posición de las páginas (subir/bajar) y rotar páginas individuales 90° en sentido horario.
+  - Previsualización táctil ampliada de cada página antes de aplicar cambios.
+  - Guardado con opción de sobrescribir el archivo original directamente en el historial o exportarlo como un nuevo PDF independiente.
+  - Procesamiento 100% nativo y offline con `pdf-lib` conservando la calidad vectorial y texto del documento original.
 
 ---
 

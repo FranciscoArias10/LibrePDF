@@ -35,6 +35,7 @@ export const CameraScreen: React.FC = () => {
   const { colors } = useTheme();
 
   const returnToEditor = route.params?.returnToEditor ?? false;
+  const returnToEditPDF = route.params?.returnToEditPDF ?? false;
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
@@ -108,7 +109,10 @@ export const CameraScreen: React.FC = () => {
       return;
     }
 
-    if (returnToEditor) {
+    if (returnToEditPDF) {
+      // Append pages to EditPDF session
+      navigation.navigate('EditPDF', { appendedImages: capturedPages } as any);
+    } else if (returnToEditor) {
       // Append pages to existing editor session
       navigation.navigate('Editor', { appendedImages: capturedPages });
     } else {

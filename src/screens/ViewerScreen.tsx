@@ -254,6 +254,25 @@ export const ViewerScreen: React.FC = () => {
             <Text style={styles.bigActionBtnText}>Compartir PDF</Text>
           </TouchableOpacity>
 
+          {/* Button 3: Edit Pages (Add from Camera/Gallery, Delete, Reorder) */}
+          <TouchableOpacity
+            style={[
+              styles.bigActionBtn,
+              {
+                backgroundColor: colors.cardBgElevated,
+                borderColor: colors.primary,
+                borderWidth: 1.5,
+              },
+            ]}
+            onPress={() => navigation.navigate('EditPDF', { document: doc })}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="albums-outline" size={22} color={colors.primaryLight} />
+            <Text style={[styles.bigActionBtnText, { color: colors.primaryLight }]}>
+              Editar Páginas (Agregar / Quitar)
+            </Text>
+          </TouchableOpacity>
+
           {/* Button 3: Delete Document */}
           <TouchableOpacity
             style={[
@@ -366,6 +385,22 @@ export const ViewerScreen: React.FC = () => {
             </View>
 
             <View style={styles.readerActions}>
+              {/* Edit from Reader */}
+              <TouchableOpacity
+                style={styles.headerBtn}
+                onPress={() => {
+                  setIsReaderVisible(false);
+                  navigation.navigate('EditPDF', { document: doc });
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name="albums-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </TouchableOpacity>
+
               {/* Share from Reader */}
               <TouchableOpacity
                 style={styles.headerBtn}

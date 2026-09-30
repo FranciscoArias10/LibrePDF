@@ -9,6 +9,7 @@ import { EditorScreen } from './src/screens/EditorScreen';
 import { ViewerScreen } from './src/screens/ViewerScreen';
 import { CameraScreen } from './src/screens/CameraScreen';
 import { MergePDFScreen } from './src/screens/MergePDFScreen';
+import { EditPDFScreen } from './src/screens/EditPDFScreen';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { darkTheme } from './src/constants/theme';
 
@@ -60,6 +61,7 @@ function AppNavigator() {
         <Stack.Screen name="Editor" component={EditorScreen} />
         <Stack.Screen name="Viewer" component={ViewerScreen} />
         <Stack.Screen name="MergePDF" component={MergePDFScreen} />
+        <Stack.Screen name="EditPDF" component={EditPDFScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

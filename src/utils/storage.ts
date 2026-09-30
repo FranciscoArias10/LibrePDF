@@ -81,6 +81,53 @@ export async function savePDFDocument(
   return newDoc;
 }
 
+
+/**
+ * Updates an existing PDF document in-place: rewrites the PDF file content, updates pageCount,
+ * recalculates file size, and updates title in AsyncStorage history.
+ */
+export async function updatePDFDocument(
+  id: string,
+  newBase64: string,
+  newPageCount: number,
+  newTitle?: string
+): Promise<SavedPDFDocument | null> {
+  try {
+    const list = await getSavedPDFs();
+    const targetDoc = list.find((doc) => doc.id === id);
+    if (!targetDoc) return null;
+
+    // Overwrite existing PDF file in documentDirectory
+    await FileSystem.writeAsStringAsync(targetDoc.uri, newBase64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    const fileStats = await FileSystem.getInfoAsync(targetDoc.uri);
+    const fileSize =
+      fileStats.exists && 'size' in fileStats
+        ? fileStats.size
+        : Math.round(newBase64.length * 0.75);
+
+    const cleanTitle = newTitle?.trim() || targetDoc.title;
+
+    const updatedDoc: SavedPDFDocument = {
+      ...targetDoc,
+      title: cleanTitle,
+      pageCount: newPageCount,
+      fileSize,
+      createdAt: Date.now(),
+    };
+
+    const updatedList = list.map((doc) => (doc.id === id ? updatedDoc : doc));
+    await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedList));
+
+    return updatedDoc;
+  } catch (error) {
+    console.error('Error updating PDF document in storage:', error);
+    return null;
+  }
+}
+
 /**
  * Delete a PDF document from file system and history
  */
