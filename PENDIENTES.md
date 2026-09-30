@@ -10,7 +10,7 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 | :---: | :--- | :--- |
 | ⏳ | **Identificador de Paquete Final** | Configurar en `app.json` el identificador final (ej. `com.franciscoarias.librepdf`), `versionCode: 1` y `versionName: "1.0.0"`. |
 | ⏳ | **Íconos y Splash en Alta Resolución** | Reemplazar los íconos genéricos de Expo por el logo oficial de LibrePDF en 512x512 px (Play Store) y 1024x500 px (Feature Graphic). |
-| ⏳ | **Página de Política de Privacidad** | Crear una página web pública (ej. GitHub Pages) detallando que la app no almacena ni comparte datos de usuarios y que la cámara/galería solo se usa localmente. |
+| ✅ | **Página de Política de Privacidad** | Creada en `/docs` lista para GitHub Pages (`https://franciscoarias10.github.io/LibrePDF/`), bilingüe (ES/EN), diseño premium dark mode y 100% compatible con Google Play. |
 | ⏳ | **Compilación de Producción (`.aab`)** | Ejecutar `npx eas build -p android --profile production` para generar el Android App Bundle listo para subir a Google Play Console. |
 
 ---
