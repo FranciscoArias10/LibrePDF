@@ -27,6 +27,8 @@ import {
   importExternalPDFToLocalStorage,
 } from '../utils/pdfMerger';
 import { Header } from '../components/Header';
+import { DocumentSuccessModal } from '../components/DocumentSuccessModal';
+import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { SPACING, RADIUS, generateDefaultDocumentTitle } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -50,6 +52,11 @@ export const MergePDFScreen: React.FC = () => {
   const [mergeProgressText, setMergeProgressText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importingText, setImportingText] = useState('');
+
+  // Native In-App Success & Confirm Modals
+  const [successMergedDoc, setSuccessMergedDoc] = useState<SavedPDFDocument | null>(null);
+  const [isClearModalVisible, setIsClearModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState<string | null>(null);
 
   // History Picker Modal State
   const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
@@ -168,7 +175,7 @@ export const MergePDFScreen: React.FC = () => {
     } catch (error) {
       setIsImporting(false);
       console.error('Error picking document from device:', error);
-      Alert.alert('Error', 'No se pudo seleccionar el archivo PDF del dispositivo.');
+      setErrorModalMessage('No se pudo seleccionar el archivo PDF del dispositivo.');
     }
   };
 
@@ -202,7 +209,7 @@ export const MergePDFScreen: React.FC = () => {
   // Merge Action
   const handleStartMerge = async () => {
     if (selectedItems.length < 2) {
-      Alert.alert('Atención', 'Selecciona al menos 2 documentos PDF para unirlos.');
+      setErrorModalMessage('Selecciona al menos 2 documentos PDF para unirlos.');
       return;
     }
 
@@ -220,15 +227,11 @@ export const MergePDFScreen: React.FC = () => {
 
       setIsMerging(false);
 
-      // Navigate to viewer with new document
-      navigation.navigate('Viewer', {
-        pdfDoc: finalDoc,
-        isNew: true,
-      });
+      // Trigger Native In-App Success Modal (replaces Android system alerts!)
+      setSuccessMergedDoc(finalDoc);
     } catch (error: any) {
       setIsMerging(false);
-      Alert.alert(
-        'Error al unir PDFs',
+      setErrorModalMessage(
         error?.message || 'Ocurrió un problema inesperado al combinar los archivos.'
       );
     }
@@ -258,10 +261,7 @@ export const MergePDFScreen: React.FC = () => {
         rightIcon={selectedItems.length > 0 ? 'trash-outline' : undefined}
         onRightPress={() => {
           if (selectedItems.length > 0) {
-            Alert.alert('Vaciar lista', '¿Deseas quitar todos los documentos seleccionados?', [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Vaciar', style: 'destructive', onPress: () => setSelectedItems([]) },
-            ]);
+            setIsClearModalVisible(true);
           }
         }}
       />
@@ -730,6 +730,58 @@ export const MergePDFScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Native In-App Document Success Modal for Merged PDF */}
+      {successMergedDoc && (
+        <DocumentSuccessModal
+          visible={!!successMergedDoc}
+          title="¡PDFs Unidos con Éxito!"
+          subtitle={`Se combinaron ${selectedItems.length} documentos en un archivo consolidado.`}
+          documentTitle={successMergedDoc.title}
+          pageCount={successMergedDoc.pageCount}
+          primaryButtonText="Ver Documento"
+          secondaryButtonText="Ir al Inicio"
+          onViewDocument={() => {
+            const doc = successMergedDoc;
+            setSuccessMergedDoc(null);
+            navigation.replace('Viewer', { pdfDoc: doc, isNew: false });
+          }}
+          onGoHome={() => {
+            setSuccessMergedDoc(null);
+            navigation.navigate('Home');
+          }}
+        />
+      )}
+
+      {/* Native Clear List Modal */}
+      <ConfirmActionModal
+        visible={isClearModalVisible}
+        title="Vaciar Lista"
+        message="¿Deseas quitar todos los documentos seleccionados de la lista?"
+        confirmText="Vaciar"
+        cancelText="Cancelar"
+        isDestructive
+        icon="trash-outline"
+        onConfirm={() => {
+          setSelectedItems([]);
+          setIsClearModalVisible(false);
+        }}
+        onCancel={() => setIsClearModalVisible(false)}
+      />
+
+      {/* Native Error / Warning Modal */}
+      {errorModalMessage && (
+        <ConfirmActionModal
+          visible={!!errorModalMessage}
+          title="Atención"
+          message={errorModalMessage}
+          confirmText="Entendido"
+          cancelText="Cerrar"
+          icon="alert-circle-outline"
+          onConfirm={() => setErrorModalMessage(null)}
+          onCancel={() => setErrorModalMessage(null)}
+        />
+      )}
     </SafeAreaView>
   );
 };

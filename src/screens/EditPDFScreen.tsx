@@ -24,6 +24,8 @@ import { SavedPDFDocument, EditablePDFPage, RootStackParamList } from '../types'
 import { Header } from '../components/Header';
 import { PDFThumbnailGenerator } from '../components/PDFThumbnailGenerator';
 import { PermissionModal, PermissionType } from '../components/PermissionModal';
+import { DocumentSuccessModal } from '../components/DocumentSuccessModal';
+import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { saveEditedPDF } from '../utils/pdfEditor';
 import { getPDFPageCount } from '../utils/pdfMerger';
 import { SPACING, RADIUS } from '../constants/theme';
@@ -56,6 +58,26 @@ export const EditPDFScreen: React.FC = () => {
   const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
   const [saveTitle, setSaveTitle] = useState(originalDoc.title);
   const [saveMode, setSaveMode] = useState<'overwrite' | 'new_copy'>('overwrite');
+
+  // Native In-App Success Modal (replaces system alert)
+  const [successModalData, setSuccessModalData] = useState<{
+    doc: SavedPDFDocument;
+    title: string;
+    subtitle: string;
+  } | null>(null);
+
+  // Native In-App Delete Page Confirm Modal
+  const [deleteConfirmIndex, setDeleteConfirmIndex] = useState<number | null>(null);
+
+  // Native In-App Discard Changes Modal
+  const [isDiscardModalVisible, setIsDiscardModalVisible] = useState(false);
+
+  // Native In-App Warning / Info Modal
+  const [infoModalData, setInfoModalData] = useState<{
+    title: string;
+    message: string;
+    icon?: keyof typeof Ionicons.glyphMap;
+  } | null>(null);
 
   // Initialize pages from original document
   useEffect(() => {
@@ -135,29 +157,14 @@ export const EditPDFScreen: React.FC = () => {
   // Delete page
   const handleDeletePage = (index: number) => {
     if (pages.length <= 1) {
-      Alert.alert(
-        'Atención',
-        'El documento no puede quedar vacío. Debe contener al menos una página.'
-      );
+      setInfoModalData({
+        title: 'Atención',
+        message: 'El documento no puede quedar vacío. Debe contener al menos una página.',
+        icon: 'warning-outline',
+      });
       return;
     }
-
-    const targetPage = pages[index];
-    const pageLabel =
-      targetPage.type === 'existing'
-        ? `Página ${targetPage.originalPageNumber} (original)`
-        : `Página nueva (${index + 1})`;
-
-    Alert.alert('Eliminar Página', `¿Deseas eliminar la ${pageLabel}?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: () => {
-          setPages((prev) => prev.filter((_, i) => i !== index));
-        },
-      },
-    ]);
+    setDeleteConfirmIndex(index);
   };
 
   // Rotate page 90 degrees clockwise
@@ -234,7 +241,11 @@ export const EditPDFScreen: React.FC = () => {
       }
     } catch (err) {
       console.error('Error adding images from gallery:', err);
-      Alert.alert('Error', 'No se pudieron importar las imágenes de la galería.');
+      setInfoModalData({
+        title: 'Error de Importación',
+        message: 'No se pudieron importar las imágenes de la galería.',
+        icon: 'alert-circle-outline',
+      });
     }
   };
 
@@ -258,18 +269,7 @@ export const EditPDFScreen: React.FC = () => {
   // Handle Back
   const handleBack = () => {
     if (hasChanges) {
-      Alert.alert(
-        'Descartar Cambios',
-        'Has realizado modificaciones en las páginas del PDF. ¿Deseas salir sin guardar?',
-        [
-          { text: 'Continuar Editando', style: 'cancel' },
-          {
-            text: 'Salir sin guardar',
-            style: 'destructive',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      setIsDiscardModalVisible(true);
     } else {
       navigation.goBack();
     }
@@ -278,7 +278,11 @@ export const EditPDFScreen: React.FC = () => {
   // Open Save Modal
   const handleOpenSaveModal = () => {
     if (pages.length === 0) {
-      Alert.alert('Atención', 'El documento debe contener al menos una página.');
+      setInfoModalData({
+        title: 'Atención',
+        message: 'El documento debe contener al menos una página.',
+        icon: 'warning-outline',
+      });
       return;
     }
     setSaveTitle(originalDoc.title);
@@ -304,30 +308,23 @@ export const EditPDFScreen: React.FC = () => {
 
       setSavingProgress(null);
 
-      Alert.alert(
-        '¡Cambios Guardados!',
-        saveMode === 'overwrite'
-          ? 'El archivo ha sido actualizado con éxito.'
-          : 'Se ha creado una nueva copia modificada del documento.',
-        [
-          {
-            text: 'Ver Documento',
-            onPress: () => {
-              navigation.replace('Viewer', {
-                pdfDoc: updatedDoc,
-                isNew: false,
-              });
-            },
-          },
-        ]
-      );
+      // Trigger Native In-App Success Modal (replaces Android system alerts!)
+      setSuccessModalData({
+        doc: updatedDoc,
+        title: saveMode === 'overwrite' ? '¡Cambios Guardados!' : '¡Copia Creada!',
+        subtitle:
+          saveMode === 'overwrite'
+            ? 'El archivo ha sido actualizado con éxito en tu dispositivo.'
+            : 'Se ha creado una nueva copia modificada del documento.',
+      });
     } catch (err: any) {
       setSavingProgress(null);
       console.error('Error saving edited PDF:', err);
-      Alert.alert(
-        'Error al guardar',
-        err?.message || 'Ocurrió un error inesperado al aplicar las modificaciones.'
-      );
+      setInfoModalData({
+        title: 'Error al Guardar',
+        message: err?.message || 'Ocurrió un error inesperado al aplicar las modificaciones.',
+        icon: 'close-circle-outline',
+      });
     }
   };
 
@@ -840,6 +837,87 @@ export const EditPDFScreen: React.FC = () => {
         }}
         onCancel={() => setIsPermissionModalVisible(false)}
       />
+
+      {/* Native In-App Document Success Modal (Replaces Android system alert for viewing doc) */}
+      {successModalData && (
+        <DocumentSuccessModal
+          visible={!!successModalData}
+          title={successModalData.title}
+          subtitle={successModalData.subtitle}
+          documentTitle={successModalData.doc.title}
+          pageCount={successModalData.doc.pageCount}
+          primaryButtonText="Ver Documento"
+          secondaryButtonText="Ir al Inicio"
+          onViewDocument={() => {
+            const targetDoc = successModalData.doc;
+            setSuccessModalData(null);
+            navigation.replace('Viewer', {
+              pdfDoc: targetDoc,
+              isNew: false,
+            });
+          }}
+          onGoHome={() => {
+            setSuccessModalData(null);
+            navigation.navigate('Home');
+          }}
+        />
+      )}
+
+      {/* Native Delete Page Confirmation Modal */}
+      <ConfirmActionModal
+        visible={deleteConfirmIndex !== null}
+        title="Eliminar Página"
+        message={
+          deleteConfirmIndex !== null && pages[deleteConfirmIndex]
+            ? `¿Deseas eliminar la ${
+                pages[deleteConfirmIndex].type === 'existing'
+                  ? `página ${pages[deleteConfirmIndex].originalPageNumber} (original)`
+                  : `página nueva (${deleteConfirmIndex + 1})`
+              }?`
+            : '¿Deseas eliminar esta página?'
+        }
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive
+        icon="trash-outline"
+        onConfirm={() => {
+          if (deleteConfirmIndex !== null) {
+            setPages((prev) => prev.filter((_, i) => i !== deleteConfirmIndex));
+            setDeleteConfirmIndex(null);
+          }
+        }}
+        onCancel={() => setDeleteConfirmIndex(null)}
+      />
+
+      {/* Native Discard Changes Confirmation Modal */}
+      <ConfirmActionModal
+        visible={isDiscardModalVisible}
+        title="Descartar Cambios"
+        message="Has realizado modificaciones en las páginas del PDF. ¿Deseas salir sin guardar?"
+        confirmText="Descartar"
+        cancelText="Continuar Editando"
+        isDestructive
+        icon="alert-circle-outline"
+        onConfirm={() => {
+          setIsDiscardModalVisible(false);
+          navigation.goBack();
+        }}
+        onCancel={() => setIsDiscardModalVisible(false)}
+      />
+
+      {/* Native Info / Warning Modal */}
+      {infoModalData && (
+        <ConfirmActionModal
+          visible={!!infoModalData}
+          title={infoModalData.title}
+          message={infoModalData.message}
+          confirmText="Entendido"
+          cancelText="Cerrar"
+          icon={infoModalData.icon || 'information-circle-outline'}
+          onConfirm={() => setInfoModalData(null)}
+          onCancel={() => setInfoModalData(null)}
+        />
+      )}
     </SafeAreaView>
   );
 };

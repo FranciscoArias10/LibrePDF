@@ -24,6 +24,7 @@ import { getSavedPDFs, deletePDFDocument, sharePDFDocument, renamePDFDocument } 
 import { Header } from '../components/Header';
 import { DocumentCard } from '../components/DocumentCard';
 import { PermissionModal, PermissionType } from '../components/PermissionModal';
+import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { SPACING } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -43,6 +44,8 @@ export const HomeScreen: React.FC = () => {
   const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
   const [renamingDoc, setRenamingDoc] = useState<SavedPDFDocument | null>(null);
   const [newDocTitle, setNewDocTitle] = useState('');
+
+  const [deletingDoc, setDeletingDoc] = useState<SavedPDFDocument | null>(null);
 
   // Multi-selection mode for merging PDFs
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -126,10 +129,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleDeleteDoc = (doc: SavedPDFDocument) => {
-    Alert.alert('Eliminar Documento', `¿Estás seguro de eliminar "${doc.title}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => { await deletePDFDocument(doc.id); await loadDocuments(); } },
-    ]);
+    setDeletingDoc(doc);
   };
 
   const handleShareDoc = async (doc: SavedPDFDocument) => {
@@ -445,6 +445,26 @@ export const HomeScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Native Delete Document Confirmation Modal */}
+      <ConfirmActionModal
+        visible={!!deletingDoc}
+        title="Eliminar Documento"
+        message={`¿Estás seguro de eliminar "${deletingDoc?.title}" de tu dispositivo?`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive
+        icon="trash-outline"
+        onConfirm={async () => {
+          if (deletingDoc) {
+            const targetId = deletingDoc.id;
+            setDeletingDoc(null);
+            await deletePDFDocument(targetId);
+            await loadDocuments();
+          }
+        }}
+        onCancel={() => setDeletingDoc(null)}
+      />
     </SafeAreaView>
   );
 };

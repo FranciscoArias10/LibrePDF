@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SavedPDFDocument, RootStackParamList } from '../types';
 import { formatFileSize, sharePDFDocument, deletePDFDocument, renamePDFDocument } from '../utils/storage';
 import { Header } from '../components/Header';
+import { ConfirmActionModal } from '../components/ConfirmActionModal';
 import { useTheme } from '../contexts/ThemeContext';
 import { PDFEmbeddedViewer, PDFEmbeddedViewerRef } from '../components/PDFEmbeddedViewer';
 
@@ -48,6 +49,7 @@ export const ViewerScreen: React.FC = () => {
   const [readerCurrentPage, setReaderCurrentPage] = useState(1);
   const [readerTotalPages, setReaderTotalPages] = useState(doc.pageCount || 1);
   const [zoomScale, setZoomScale] = useState(1.0);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
   const handleOpenRename = () => {
     setNewTitleInput(docTitle);
@@ -107,21 +109,7 @@ export const ViewerScreen: React.FC = () => {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Eliminar Documento',
-      `¿Deseas eliminar "${docTitle}" de tu dispositivo?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await deletePDFDocument(doc.id);
-            navigation.replace('Home');
-          },
-        },
-      ]
-    );
+    setIsDeleteModalVisible(true);
   };
 
   const formattedDate = new Date(doc.createdAt).toLocaleDateString('es-ES', {
@@ -660,6 +648,23 @@ export const ViewerScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Native Delete Document Confirmation Modal */}
+      <ConfirmActionModal
+        visible={isDeleteModalVisible}
+        title="Eliminar Documento"
+        message={`¿Deseas eliminar "${docTitle}" de tu dispositivo? Esta acción no se puede deshacer.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive
+        icon="trash-outline"
+        onConfirm={async () => {
+          setIsDeleteModalVisible(false);
+          await deletePDFDocument(doc.id);
+          navigation.replace('Home');
+        }}
+        onCancel={() => setIsDeleteModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
