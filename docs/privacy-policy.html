@@ -496,7 +496,7 @@
         </div>
         <div class="logo-text">
           <h1>LibrePDF</h1>
-          <span>Documentos Seguros</span>
+          <span id="logo-sub">Documentos Seguros</span>
         </div>
       </a>
 
@@ -772,45 +772,59 @@
 
     <!-- Footer -->
     <footer>
-      <p>&copy; 2026 LibrePDF &middot; Desarrollado por Francisco Arias. Todos los derechos reservados.</p>
-      <p style="margin-top: 6px;"><a href="https://github.com/FranciscoArias10/LibrePDF" target="_blank" rel="noopener">Código fuente en GitHub</a></p>
+      <p id="footer-copy">&copy; 2026 LibrePDF &middot; Desarrollado por Francisco Arias. Todos los derechos reservados.</p>
+      <p style="margin-top: 6px;"><a id="footer-link" href="https://github.com/FranciscoArias10/LibrePDF" target="_blank" rel="noopener">Código fuente en GitHub</a></p>
     </footer>
   </div>
 
   <script>
     function switchLang(lang) {
-      const esContent = document.getElementById('content-es');
-      const enContent = document.getElementById('content-en');
-      const btnEs = document.getElementById('btn-es');
-      const btnEn = document.getElementById('btn-en');
-      const badgeText = document.getElementById('badge-text');
-      const heroTitle = document.getElementById('hero-title');
-      const heroSub = document.getElementById('hero-sub');
-      const metaDate = document.getElementById('meta-date');
+      const isEn = lang === 'en';
 
-      if (lang === 'en') {
-        esContent.style.display = 'none';
-        enContent.style.display = 'block';
-        btnEs.classList.remove('active');
-        btnEn.classList.add('active');
+      // Toggle tab contents and buttons
+      document.getElementById('content-es').style.display = isEn ? 'none' : 'block';
+      document.getElementById('content-en').style.display = isEn ? 'block' : 'none';
+      document.getElementById('btn-es').classList.toggle('active', !isEn);
+      document.getElementById('btn-en').classList.toggle('active', isEn);
+      document.documentElement.lang = isEn ? 'en' : 'es';
+      document.title = isEn ? 'Privacy Policy | LibrePDF' : 'Política de Privacidad | LibrePDF';
 
-        badgeText.innerHTML = '100% Offline &middot; Zero Tracking &middot; No Servers';
-        heroTitle.textContent = 'Privacy Policy';
-        heroSub.textContent = 'At LibrePDF, we strongly believe your documents and photos belong exclusively to you. We do not collect, store, or transmit any personal data.';
-        metaDate.textContent = 'Last updated: September 30, 2026';
-        document.documentElement.lang = 'en';
-      } else {
-        esContent.style.display = 'block';
-        enContent.style.display = 'none';
-        btnEn.classList.remove('active');
-        btnEs.classList.add('active');
+      // Header & Hero Section
+      document.getElementById('logo-sub').textContent = isEn ? 'Secure Documents' : 'Documentos Seguros';
+      document.getElementById('badge-text').innerHTML = isEn 
+        ? '100% Offline &middot; Zero Tracking &middot; No Servers' 
+        : '100% Offline &middot; Sin Rastreo &middot; Sin Servidores';
+      document.getElementById('hero-title').textContent = isEn ? 'Privacy Policy' : 'Política de Privacidad';
+      document.getElementById('hero-sub').textContent = isEn 
+        ? 'At LibrePDF, we strongly believe your documents and photos belong exclusively to you. We do not collect, store, or transmit any personal data.' 
+        : 'En LibrePDF creemos firmemente que tus documentos y tus fotos son exclusivamente tuyos. No recopilamos, no almacenamos y no transmitimos ningún dato personal.';
+      document.getElementById('meta-date').textContent = isEn 
+        ? 'Last updated: September 30, 2026' 
+        : 'Última actualización: 30 de Septiembre de 2026';
 
-        badgeText.innerHTML = '100% Offline &middot; Sin Rastreo &middot; Sin Servidores';
-        heroTitle.textContent = 'Política de Privacidad';
-        heroSub.textContent = 'En LibrePDF creemos firmemente que tus documentos y tus fotos son exclusivamente tuyos. No recopilamos, no almacenamos y no transmitimos ningún dato personal.';
-        metaDate.textContent = 'Última actualización: 30 de Septiembre de 2026';
-        document.documentElement.lang = 'es';
-      }
+      // 3 Highlight Guarantee Cards
+      document.getElementById('g1-title').textContent = isEn ? 'Zero Data Collection' : 'Sin Recolección de Datos';
+      document.getElementById('g1-desc').textContent = isEn 
+        ? 'We do not record names, emails, locations, or metadata. The app requires no accounts or logins.' 
+        : 'No registramos nombres, correos, ubicaciones ni metadatos. La aplicación no utiliza cuentas ni inicios de sesión.';
+
+      document.getElementById('g2-title').textContent = isEn ? '100% Local Processing' : 'Procesamiento 100% Local';
+      document.getElementById('g2-desc').textContent = isEn 
+        ? 'PDF conversion, filters, signatures, and document merging execute entirely in your device\'s memory.' 
+        : 'La conversión a PDF, filtros, firmas y fusión de documentos se ejecutan enteramente en la memoria de tu teléfono.';
+
+      document.getElementById('g3-title').textContent = isEn ? 'Zero Cloud or Servers' : 'Cero Servidores o Nubes';
+      document.getElementById('g3-desc').textContent = isEn 
+        ? 'Your files never travel over the internet or upload to the cloud. Operates fully without an internet connection.' 
+        : 'Tus archivos nunca viajan por internet ni se cargan a la nube. Funcionamiento pleno incluso sin conexión a internet.';
+
+      // Footer
+      document.getElementById('footer-copy').innerHTML = isEn 
+        ? '&copy; 2026 LibrePDF &middot; Developed by Francisco Arias. All rights reserved.' 
+        : '&copy; 2026 LibrePDF &middot; Desarrollado por Francisco Arias. Todos los derechos reservados.';
+      document.getElementById('footer-link').textContent = isEn 
+        ? 'Source code on GitHub' 
+        : 'Código fuente en GitHub';
     }
   </script>
 </body>
