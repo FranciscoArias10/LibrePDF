@@ -209,8 +209,8 @@ export const HomeScreen: React.FC = () => {
             onPress={() => navigation.navigate('MergePDF')}
             activeOpacity={0.85}
           >
-            <View style={[styles.mergeIconBox, { backgroundColor: colors.secondaryGlow }]}>
-              <Ionicons name="git-merge-outline" size={20} color={colors.secondary} />
+            <View style={[styles.mergeIconBox, { backgroundColor: colors.primaryGlow }]}>
+              <Ionicons name="git-merge-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.mergeBtnTexts}>
               <Text style={[styles.mergeBtnTitle, { color: colors.textPrimary }]}>
