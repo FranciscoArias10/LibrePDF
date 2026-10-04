@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PageImage, RootStackParamList } from '../types';
 import { SPACING, RADIUS } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -44,6 +45,30 @@ export const CameraScreen: React.FC = () => {
   const [flash, setFlash] = useState<FlashMode>('off');
   const [capturedPages, setCapturedPages] = useState<PageImage[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
+
+  // Perspective & Edge Cropper State
+  const [isCropperVisible, setIsCropperVisible] = useState(false);
+  const [cropperPageIndex, setCropperPageIndex] = useState<number | null>(null);
+
+  const handleCameraCropComplete = (result: { uri: string; width: number; height: number }) => {
+    if (cropperPageIndex !== null && result.uri) {
+      setCapturedPages((prev) => {
+        const updated = [...prev];
+        if (updated[cropperPageIndex]) {
+          updated[cropperPageIndex] = {
+            ...updated[cropperPageIndex],
+            uri: result.uri,
+            originalUri: result.uri,
+            width: result.width,
+            height: result.height,
+          };
+        }
+        return updated;
+      });
+    }
+    setIsCropperVisible(false);
+    setCropperPageIndex(null);
+  };
 
   // Flash animation for shutter feedback
   const flashAnim = useRef(new Animated.Value(0)).current;
@@ -251,15 +276,25 @@ export const CameraScreen: React.FC = () => {
 
       {/* Bottom Controls Overlay */}
       <View style={styles.bottomBar}>
-        {/* Left: Thumbnail & Counter */}
+        {/* Left: Thumbnail & Counter with Crop shortcut */}
         <View style={styles.thumbContainer}>
           {lastPhoto ? (
-            <View style={styles.thumbWrapper}>
+            <TouchableOpacity
+              style={styles.thumbWrapper}
+              onPress={() => {
+                setCropperPageIndex(capturedPages.length - 1);
+                setIsCropperVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
               <Image source={{ uri: lastPhoto.uri }} style={styles.thumbImage} />
               <View style={styles.counterBadge}>
                 <Text style={styles.counterText}>{capturedPages.length}</Text>
               </View>
-            </View>
+              <View style={styles.thumbCropBadge}>
+                <Ionicons name="crop" size={10} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
           ) : (
             <View style={styles.thumbEmpty}>
               <Ionicons name="documents-outline" size={24} color="#666666" />
@@ -296,6 +331,21 @@ export const CameraScreen: React.FC = () => {
           )}
         </View>
       </View>
+
+      {/* Perspective & Edge Cropper Modal */}
+      {isCropperVisible && cropperPageIndex !== null && capturedPages[cropperPageIndex] && (
+        <ImageCropperModal
+          visible={isCropperVisible}
+          imageUri={capturedPages[cropperPageIndex].uri}
+          imageWidth={capturedPages[cropperPageIndex].width}
+          imageHeight={capturedPages[cropperPageIndex].height}
+          onClose={() => {
+            setIsCropperVisible(false);
+            setCropperPageIndex(null);
+          }}
+          onCropComplete={handleCameraCropComplete}
+        />
+      )}
     </View>
   );
 };
@@ -463,6 +513,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
+  },
+  thumbCropBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: '#E53935',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#000000',
   },
   thumbEmpty: {
     width: 52,

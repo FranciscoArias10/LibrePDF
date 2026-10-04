@@ -17,6 +17,18 @@ export interface SignatureStamp {
   color?: string; // ink color if drawing
 }
 
+export interface CornerPoint {
+  x: number; // 0 to 1 normalized
+  y: number; // 0 to 1 normalized
+}
+
+export interface DocumentCorners {
+  tl: CornerPoint;
+  tr: CornerPoint;
+  br: CornerPoint;
+  bl: CornerPoint;
+}
+
 export interface PageImage {
   id: string;
   uri: string;

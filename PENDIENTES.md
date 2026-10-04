@@ -44,11 +44,15 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 
 ---
 
-### 📐 Detección Automática de Bordes (Auto-crop Inteligente)
-- **Prioridad:** Media
+### 📐 Detección Automática de Bordes (Auto-crop Inteligente y Perspectiva)
+- **Estado:** ✅ *Implementado*
 - **Descripción:** 
-  - Detección automática de los 4 vértices del papel/documento sobre una mesa o fondo contrastado al tomar la foto.
-  - Corrección de perspectiva para enderezar documentos tomados en ángulo.
+  - Detección automática en milisegundos de las 4 esquinas de la hoja de papel sobre cualquier superficie mediante gradientes Sobel y análisis de contorno.
+  - Corrección de perspectiva (homografía proyectiva completa 3x3) acelerada por GPU con WebGL y renderizado HTML5 Canvas offline.
+  - Interfaz táctil con 4 esquinas independientes y 4 manijas de borde para mover lados completos paralelamente.
+  - Lupa de precisión dinámica (zoom 2.5x con retícula) que flota sobre el dedo para alinear las esquinas con precisión milimétrica.
+  - Modos duales: "Perspectiva (4 Esquinas)" y "Rectangular Tradicional", con botón de giro 90° y pantalla completa.
+  - Accesible directamente al tocar la miniatura en la cámara tras la captura y en cada tarjeta del editor de páginas.
 
 ---
 
