@@ -79,6 +79,20 @@ export const PageCard = React.memo<PageCardProps>(({
             <Text style={styles.signedBadgeText}>Firmado</Text>
           </View>
         )}
+
+        {/* Individual Orientation Badge */}
+        {page.orientation && (
+          <View style={[styles.orientationBadge, { backgroundColor: colors.cardBgElevated, borderColor: colors.primary }]}>
+            <Ionicons
+              name={page.orientation === 'portrait' ? 'phone-portrait-outline' : 'phone-landscape-outline'}
+              size={11}
+              color={colors.primary}
+            />
+            <Text style={[styles.orientationBadgeText, { color: colors.textPrimary }]}>
+              {page.orientation === 'portrait' ? 'Vertical' : 'Horizontal'}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Control Buttons Footer */}
@@ -261,6 +275,22 @@ const styles = StyleSheet.create({
   },
   signedBadgeText: {
     color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  orientationBadge: {
+    position: 'absolute',
+    bottom: SPACING.xs + 2,
+    right: SPACING.xs + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: SPACING.xs + 2,
+    paddingVertical: 2,
+    borderRadius: RADIUS.xs,
+    borderWidth: 1,
+  },
+  orientationBadgeText: {
     fontSize: 10,
     fontWeight: '700',
   },

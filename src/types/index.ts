@@ -29,6 +29,10 @@ export interface DocumentCorners {
   bl: CornerPoint;
 }
 
+export type PageOrientation = 'portrait' | 'landscape';
+export type PageSize = 'A4' | 'LETTER' | 'LEGAL' | 'FIT';
+export type PageMargin = 'none' | 'small' | 'medium' | 'large';
+
 export interface PageImage {
   id: string;
   uri: string;
@@ -39,11 +43,8 @@ export interface PageImage {
   filter: ImageFilterType;
   layoutTransform?: ImageLayoutTransform;
   signature?: SignatureStamp;
+  orientation?: PageOrientation; // Individual page orientation ('portrait' | 'landscape')
 }
-
-export type PageSize = 'A4' | 'LETTER' | 'LEGAL' | 'FIT';
-export type PageOrientation = 'portrait' | 'landscape';
-export type PageMargin = 'none' | 'small' | 'medium' | 'large';
 
 export interface PDFSettings {
   pageSize: PageSize;

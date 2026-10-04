@@ -20,8 +20,7 @@ interface PageLayoutModalProps {
   page: PageImage | null;
   orientation?: PageOrientation;
   pageSize?: PageSize;
-  onOrientationChange?: (newOrientation: PageOrientation) => void;
-  onSave: (transform: ImageLayoutTransform, newRotation: number) => void;
+  onSave: (transform: ImageLayoutTransform, newRotation: number, pageOrientation: PageOrientation) => void;
   onCancel: () => void;
 }
 
@@ -30,7 +29,6 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
   page,
   orientation = 'portrait',
   pageSize = 'A4',
-  onOrientationChange,
   onSave,
   onCancel,
 }) => {
@@ -144,7 +142,6 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
   const handleToggleOrientation = () => {
     const next: PageOrientation = currentOrientation === 'portrait' ? 'landscape' : 'portrait';
     setCurrentOrientation(next);
-    onOrientationChange?.(next);
     handleReset();
   };
 
@@ -244,7 +241,8 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
         y: currentPan.current.y / canvasLayout.height,
         scale: currentScale.current,
       },
-      localRotation
+      localRotation,
+      currentOrientation
     );
   };
 

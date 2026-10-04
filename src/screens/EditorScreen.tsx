@@ -15,7 +15,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { PageImage, PDFSettings, ImageFilterType, RootStackParamList } from '../types';
+import { PageImage, PDFSettings, ImageFilterType, RootStackParamList, PageOrientation } from '../types';
 import { DEFAULT_PDF_SETTINGS, generateDefaultDocumentTitle, SPACING, RADIUS, FILTER_PRESETS } from '../constants/theme';
 import { rotateImage, applyFilterToImage, getBase64ImageUri } from '../utils/imageProcessor';
 import { generatePDF } from '../utils/pdfGenerator';
@@ -122,13 +122,18 @@ export const EditorScreen: React.FC = () => {
     setIsLayoutModalVisible(true);
   }, []);
 
-  const handleLayoutSave = (transform: ImageLayoutTransform, newRotation: number) => {
+  const handleLayoutSave = (
+    transform: ImageLayoutTransform,
+    newRotation: number,
+    pageOrientation: PageOrientation
+  ) => {
     if (layoutIndex !== null) {
       const updated = [...pages];
       updated[layoutIndex] = {
         ...updated[layoutIndex],
         layoutTransform: transform,
         rotation: newRotation,
+        orientation: pageOrientation,
       };
       setPages(updated);
     }
@@ -195,12 +200,21 @@ export const EditorScreen: React.FC = () => {
     ]);
   }, [pages, selectedIndex]);
 
-  // Toggle document orientation
+  // Toggle document-wide default orientation
   const handleToggleOrientation = () => {
+    const nextOrientation: PageOrientation =
+      pdfSettings.orientation === 'portrait' ? 'landscape' : 'portrait';
     setPDFSettings((prev) => ({
       ...prev,
-      orientation: prev.orientation === 'portrait' ? 'landscape' : 'portrait',
+      orientation: nextOrientation,
     }));
+    // When changing document default, clear individual page overrides so all pages adopt the new default
+    setPages((prev) =>
+      prev.map((p) => ({
+        ...p,
+        orientation: undefined,
+      }))
+    );
   };
 
   // Apply filter to current page
@@ -534,11 +548,12 @@ export const EditorScreen: React.FC = () => {
       <PageLayoutModal
         visible={isLayoutModalVisible}
         page={layoutIndex !== null ? pages[layoutIndex] : null}
-        orientation={pdfSettings.orientation}
+        orientation={
+          layoutIndex !== null
+            ? (pages[layoutIndex].orientation || pdfSettings.orientation)
+            : pdfSettings.orientation
+        }
         pageSize={pdfSettings.pageSize}
-        onOrientationChange={(newOrient) => {
-          setPDFSettings((prev) => ({ ...prev, orientation: newOrient }));
-        }}
         onSave={handleLayoutSave}
         onCancel={() => {
           setIsLayoutModalVisible(false);
