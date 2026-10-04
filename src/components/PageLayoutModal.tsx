@@ -13,11 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { SPACING, RADIUS } from '../constants/theme';
 import { useTheme } from '../contexts/ThemeContext';
-import { PageImage, ImageLayoutTransform } from '../types';
+import { PageImage, ImageLayoutTransform, PageOrientation, PageSize } from '../types';
 
 interface PageLayoutModalProps {
   visible: boolean;
   page: PageImage | null;
+  orientation?: PageOrientation;
+  pageSize?: PageSize;
+  onOrientationChange?: (newOrientation: PageOrientation) => void;
   onSave: (transform: ImageLayoutTransform, newRotation: number) => void;
   onCancel: () => void;
 }
@@ -25,13 +28,25 @@ interface PageLayoutModalProps {
 export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
   visible,
   page,
+  orientation = 'portrait',
+  pageSize = 'A4',
+  onOrientationChange,
   onSave,
   onCancel,
 }) => {
   const { colors } = useTheme();
+  const [currentOrientation, setCurrentOrientation] = useState<PageOrientation>(orientation);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [canvasLayout, setCanvasLayout] = useState({ width: 1, height: 1 });
   const [imageBounds, setImageBounds] = useState({ width: 0, height: 0 });
   const [localRotation, setLocalRotation] = useState(0);
+
+  // Sync orientation with prop on open or update
+  useEffect(() => {
+    if (visible && orientation) {
+      setCurrentOrientation(orientation);
+    }
+  }, [visible, orientation]);
 
   // Animated values for transform
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -42,8 +57,6 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
   const currentScale = useRef(1);
 
   // Gesture tracking refs
-  const gestureMode = useRef<'none' | 'pan' | 'pinch'>('none');
-  const lastTouch = useRef<{ x: number; y: number } | null>(null);
   const initialPinchDist = useRef<number | null>(null);
   const pinchStartScale = useRef<number>(1);
   const lastTapTime = useRef(0);
@@ -128,6 +141,13 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
     currentScale.current = 1;
   };
 
+  const handleToggleOrientation = () => {
+    const next: PageOrientation = currentOrientation === 'portrait' ? 'landscape' : 'portrait';
+    setCurrentOrientation(next);
+    onOrientationChange?.(next);
+    handleReset();
+  };
+
   const handleZoomIn = () => {
     const newScale = Math.min(5.0, currentScale.current + 0.2);
     currentScale.current = newScale;
@@ -196,7 +216,7 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
         pan.flattenOffset();
         initialPinchDist.current = null;
 
-        // Doble toque para restablecer
+        // Doble toque para centrar
         const now = Date.now();
         if (Math.abs(gestureState.dx) < 8 && Math.abs(gestureState.dy) < 8) {
           if (now - lastTapTime.current < 300) {
@@ -230,16 +250,60 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
 
   if (!page) return null;
 
+  // Calculate paper aspect ratio (width / height)
+  const getCanvasAspectRatio = (size: PageSize, orient: PageOrientation): number => {
+    let baseRatio = 1 / 1.414; // Default A4 portrait
+    if (size === 'LETTER') {
+      baseRatio = 8.5 / 11;
+    } else if (size === 'LEGAL') {
+      baseRatio = 8.5 / 14;
+    }
+    return orient === 'landscape' ? 1 / baseRatio : baseRatio;
+  };
+
+  const canvasRatio = getCanvasAspectRatio(pageSize, currentOrientation);
+
+  // Compute bounding box dimensions to maximize canvas within container
+  const getCanvasStyle = () => {
+    if (containerSize.width <= 0 || containerSize.height <= 0) {
+      return { width: '100%' as const, aspectRatio: canvasRatio };
+    }
+    const maxW = containerSize.width;
+    const maxH = containerSize.height;
+    const containerRatio = maxW / maxH;
+
+    let w: number;
+    let h: number;
+    if (canvasRatio > containerRatio) {
+      // Width is limiting
+      w = maxW;
+      h = maxW / canvasRatio;
+    } else {
+      // Height is limiting
+      h = maxH;
+      w = maxH * canvasRatio;
+    }
+    return {
+      width: Math.floor(w),
+      height: Math.floor(h),
+    };
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onCancel} style={styles.headerBtn}>
-            <Ionicons name="close" size={28} color={colors.textPrimary} />
+            <Ionicons name="close" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Acomodar Página</Text>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Acomodar Página</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.primary }]}>
+              {pageSize} · {currentOrientation === 'portrait' ? 'Vertical' : 'Horizontal'}
+            </Text>
+          </View>
           <TouchableOpacity onPress={handleSave} style={styles.headerBtn}>
-            <Ionicons name="checkmark" size={28} color={colors.primary} />
+            <Ionicons name="checkmark" size={26} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -247,10 +311,20 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
         <View
           style={styles.canvasContainer}
           collapsable={false}
+          onLayout={(e) => {
+            const { width: cw, height: ch } = e.nativeEvent.layout;
+            if (cw > 0 && ch > 0) {
+              setContainerSize({ width: cw, height: ch });
+            }
+          }}
           {...panResponder.panHandlers}
         >
           <View
-            style={[styles.canvas, { backgroundColor: '#FFFFFF' }]}
+            style={[
+              styles.canvas,
+              getCanvasStyle(),
+              { backgroundColor: '#FFFFFF' },
+            ]}
             collapsable={false}
             onLayout={(e) =>
               setCanvasLayout({
@@ -289,36 +363,54 @@ export const PageLayoutModal: React.FC<PageLayoutModalProps> = ({
 
         <View style={[styles.footer, { backgroundColor: colors.cardBg, borderTopColor: colors.border }]}>
           <View style={styles.actionsRow}>
+            {/* Botón para cambiar orientación de la hoja */}
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+              onPress={handleToggleOrientation}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name={currentOrientation === 'portrait' ? 'phone-portrait-outline' : 'phone-landscape-outline'}
+                size={16}
+                color={colors.primary}
+              />
+              <Text style={[styles.actionBtnText, { color: colors.primary }]}>
+                {currentOrientation === 'portrait' ? 'Vertical' : 'Horizontal'}
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
               onPress={() => setLocalRotation((r) => (r + 90) % 360)}
+              activeOpacity={0.75}
             >
-              <Ionicons name="refresh" size={18} color={colors.primary} />
+              <Ionicons name="refresh" size={16} color={colors.primary} />
               <Text style={[styles.actionBtnText, { color: colors.primary }]}>Girar</Text>
             </TouchableOpacity>
 
             {/* Controles de Zoom Rápido */}
             <View style={[styles.zoomGroup, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <TouchableOpacity style={styles.zoomBtn} onPress={handleZoomOut}>
-                <Ionicons name="remove" size={18} color={colors.textPrimary} />
+                <Ionicons name="remove" size={16} color={colors.textPrimary} />
               </TouchableOpacity>
               <View style={[styles.zoomDivider, { backgroundColor: colors.border }]} />
               <TouchableOpacity style={styles.zoomBtn} onPress={handleZoomIn}>
-                <Ionicons name="add" size={18} color={colors.textPrimary} />
+                <Ionicons name="add" size={16} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
               onPress={handleReset}
+              activeOpacity={0.75}
             >
-              <Ionicons name="scan-outline" size={18} color={colors.textPrimary} />
-              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Restablecer</Text>
+              <Ionicons name="scan-outline" size={16} color={colors.textPrimary} />
+              <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>Centrar</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={[styles.instruction, { color: colors.textSecondary }]}>
-            1 dedo: Arrastrar para mover · 2 dedos: Pellizcar para Zoom · +/-: Zoom rápido
+            1 dedo: Mover · 2 dedos: Pellizcar para Zoom · +/-: Zoom rápido
           </Text>
         </View>
       </SafeAreaView>
@@ -335,30 +427,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.sm + 4,
     borderBottomWidth: 1,
   },
   headerBtn: {
     padding: SPACING.xs,
   },
+  headerCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
   },
   canvasContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.md,
-    backgroundColor: '#000000',
+    backgroundColor: '#090A0F',
   },
   canvas: {
-    width: '100%',
-    aspectRatio: 1 / 1.414,
     overflow: 'hidden',
     borderRadius: RADIUS.sm,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   transformWrapper: {
     justifyContent: 'center',
@@ -401,20 +505,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm + 4,
+    paddingVertical: 7,
     borderRadius: RADIUS.full,
     borderWidth: 1,
+    gap: 4,
   },
   actionBtnText: {
-    marginLeft: SPACING.xs,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 12,
   },
   zoomGroup: {
     flexDirection: 'row',
@@ -424,17 +529,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   zoomBtn: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm + 4,
+    paddingVertical: 7,
     justifyContent: 'center',
     alignItems: 'center',
   },
   zoomDivider: {
     width: 1,
-    height: 18,
+    height: 16,
   },
   instruction: {
     fontSize: 12,
     textAlign: 'center',
   },
 });
+

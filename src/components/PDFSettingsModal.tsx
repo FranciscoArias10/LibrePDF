@@ -20,6 +20,7 @@ interface PDFSettingsModalProps {
   initialSettings: PDFSettings;
   onGenerate: (settings: PDFSettings) => void;
   onClose: () => void;
+  onSaveSettings?: (settings: PDFSettings) => void;
 }
 
 export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
@@ -27,10 +28,23 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
   initialSettings,
   onGenerate,
   onClose,
+  onSaveSettings,
 }) => {
   const { colors } = useTheme();
   const [settings, setSettings] = useState<PDFSettings>(initialSettings);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setSettings(initialSettings);
+    }
+  }, [visible, initialSettings]);
+
+  const handleClose = () => {
+    const finalTitle = settings.documentTitle.trim() || generateDefaultDocumentTitle();
+    onSaveSettings?.({ ...settings, documentTitle: finalTitle });
+    onClose();
+  };
 
   const pageSizes: { id: PageSize; label: string }[] = [
     { id: 'A4', label: 'A4' },
@@ -44,12 +58,12 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.overlay, { backgroundColor: colors.modalOverlay }]}>
         <View style={[styles.modalContainer, { backgroundColor: colors.cardBg, borderColor: colors.border }, isKeyboardVisible && styles.modalContainerKeyboard]}>
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ajustes del PDF</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -145,18 +159,37 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
             </View>
           </ScrollView>
 
-          {/* Confirm Button */}
+          {/* Footer Actions */}
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[styles.generateBtn, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                const finalTitle = settings.documentTitle.trim() || generateDefaultDocumentTitle();
-                onGenerate({ ...settings, documentTitle: finalTitle });
-              }}
-            >
-              <Text style={styles.generateBtnText}>Generar PDF</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
-            </TouchableOpacity>
+            <View style={styles.footerButtonsRow}>
+              {/* Option 1: Save settings & return to editor to arrange pages */}
+              <TouchableOpacity
+                style={[
+                  styles.saveBtn,
+                  { backgroundColor: colors.cardBgElevated, borderColor: colors.border },
+                ]}
+                onPress={handleClose}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="options-outline" size={17} color={colors.primary} />
+                <Text style={[styles.saveBtnText, { color: colors.textPrimary }]}>
+                  Guardar y Acomodar
+                </Text>
+              </TouchableOpacity>
+
+              {/* Option 2: Generate PDF directly */}
+              <TouchableOpacity
+                style={[styles.generateBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  const finalTitle = settings.documentTitle.trim() || generateDefaultDocumentTitle();
+                  onGenerate({ ...settings, documentTitle: finalTitle });
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.generateBtnText}>Generar PDF</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -235,14 +268,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderTopWidth: 1,
   },
-  generateBtn: {
+  footerButtonsRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  saveBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
+    gap: 6,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+  },
+  saveBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  generateBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     paddingVertical: SPACING.md,
     borderRadius: RADIUS.md,
     elevation: 2,
@@ -252,7 +304,7 @@ const styles = StyleSheet.create({
   },
   generateBtnText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
 });

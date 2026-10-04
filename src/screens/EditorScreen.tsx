@@ -195,6 +195,14 @@ export const EditorScreen: React.FC = () => {
     ]);
   }, [pages, selectedIndex]);
 
+  // Toggle document orientation
+  const handleToggleOrientation = () => {
+    setPDFSettings((prev) => ({
+      ...prev,
+      orientation: prev.orientation === 'portrait' ? 'landscape' : 'portrait',
+    }));
+  };
+
   // Apply filter to current page
   const handleFilterChange = (filter: ImageFilterType) => {
     if (pages.length === 0) return;
@@ -328,6 +336,8 @@ export const EditorScreen: React.FC = () => {
         title="Editor de PDF"
         subtitle={`${pages.length} página${pages.length !== 1 ? 's' : ''}`}
         onBack={() => navigation.goBack()}
+        rightIcon="options-outline"
+        onRightPress={() => setIsSettingsModalVisible(true)}
       />
 
       <View style={styles.workspace}>
@@ -353,6 +363,53 @@ export const EditorScreen: React.FC = () => {
             >
               <Ionicons name="camera-outline" size={16} color="#FFF" />
               <Text style={styles.addBtnText}>+ Cámara</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Document Format & Orientation Quick Bar */}
+        <View style={[styles.docConfigBar, { backgroundColor: colors.cardBgElevated, borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={styles.docConfigLeft}
+            onPress={() => setIsSettingsModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="document-text-outline" size={15} color={colors.primary} />
+            <Text style={[styles.docConfigText, { color: colors.textSecondary }]}>
+              Formato: <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>{pdfSettings.pageSize}</Text>
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.docConfigRight}>
+            <TouchableOpacity
+              style={[
+                styles.orientationChip,
+                { backgroundColor: colors.cardBg, borderColor: colors.border },
+              ]}
+              onPress={handleToggleOrientation}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={pdfSettings.orientation === 'portrait' ? 'phone-portrait-outline' : 'phone-landscape-outline'}
+                size={14}
+                color={colors.primary}
+              />
+              <Text style={[styles.orientationChipText, { color: colors.textPrimary }]}>
+                {pdfSettings.orientation === 'portrait' ? 'Vertical' : 'Horizontal'}
+              </Text>
+              <Ionicons name="swap-horizontal" size={12} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.settingsChip,
+                { backgroundColor: colors.cardBg, borderColor: colors.border },
+              ]}
+              onPress={() => setIsSettingsModalVisible(true)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="options-outline" size={15} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -425,6 +482,7 @@ export const EditorScreen: React.FC = () => {
       <PDFSettingsModal
         visible={isSettingsModalVisible}
         initialSettings={pdfSettings}
+        onSaveSettings={(newSettings) => setPDFSettings(newSettings)}
         onGenerate={(newSettings) => {
           setPDFSettings(newSettings);
           setIsSettingsModalVisible(false);
@@ -476,6 +534,11 @@ export const EditorScreen: React.FC = () => {
       <PageLayoutModal
         visible={isLayoutModalVisible}
         page={layoutIndex !== null ? pages[layoutIndex] : null}
+        orientation={pdfSettings.orientation}
+        pageSize={pdfSettings.pageSize}
+        onOrientationChange={(newOrient) => {
+          setPDFSettings((prev) => ({ ...prev, orientation: newOrient }));
+        }}
         onSave={handleLayoutSave}
         onCancel={() => {
           setIsLayoutModalVisible(false);
@@ -536,6 +599,48 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '700',
+  },
+  docConfigBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+  },
+  docConfigLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  docConfigText: {
+    fontSize: 12,
+  },
+  docConfigRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs + 2,
+  },
+  orientationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+  },
+  orientationChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  settingsChip: {
+    width: 28,
+    height: 28,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   workspace: {
     flex: 1,
