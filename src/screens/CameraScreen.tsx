@@ -10,7 +10,7 @@ import {
   StatusBar,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -34,6 +34,7 @@ export const CameraScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<CameraRouteProp>();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const returnToEditor = route.params?.returnToEditor ?? false;
   const returnToEditPDF = route.params?.returnToEditPDF ?? false;
@@ -230,18 +231,26 @@ export const CameraScreen: React.FC = () => {
       </View>
 
       {/* Top Controls Overlay */}
-      <SafeAreaView style={styles.topBar}>
+      <View
+        style={[
+          styles.topBar,
+          {
+            paddingTop: Math.max(insets.top, StatusBar.currentHeight || 0) + 10,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.topBtn}
           onPress={handleCancel}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons name="close" size={28} color="#FFFFFF" />
+          <Ionicons name="close" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
         <View style={styles.modeBadge}>
-          <Text style={styles.modeText}>
-            Escaneo Continuo · Pág. {capturedPages.length + 1}
+          <Ionicons name="document-text-outline" size={13} color="#FFFFFF" style={{ marginRight: 5 }} />
+          <Text style={styles.modeText} numberOfLines={1}>
+            Pág. {capturedPages.length + 1}
           </Text>
         </View>
 
@@ -259,7 +268,7 @@ export const CameraScreen: React.FC = () => {
                   ? 'flash-outline'
                   : 'flash-off'
               }
-              size={24}
+              size={20}
               color={flash === 'off' ? '#CCCCCC' : '#FBBF24'}
             />
           </TouchableOpacity>
@@ -269,13 +278,13 @@ export const CameraScreen: React.FC = () => {
             onPress={toggleFacing}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Ionicons name="camera-reverse-outline" size={26} color="#FFFFFF" />
+            <Ionicons name="camera-reverse-outline" size={22} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
 
       {/* Bottom Controls Overlay */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         {/* Left: Thumbnail & Counter with Crop shortcut */}
         <View style={styles.thumbContainer}>
           {lastPhoto ? (
@@ -434,35 +443,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.sm,
-    zIndex: 5,
+    paddingHorizontal: 16,
+    zIndex: 20,
   },
   topBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   topRightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: 8,
   },
   modeBadge: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   modeText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   bottomBar: {
     position: 'absolute',
