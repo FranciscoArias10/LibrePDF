@@ -11,6 +11,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -60,6 +64,12 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
     const [totalPages, setTotalPages] = useState(0);
     const [base64Content, setBase64Content] = useState<string | null>(null);
     const [isDocumentLoaded, setIsDocumentLoaded] = useState(false);
+
+    // Password Protection state
+    const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
+    const [enteredPassword, setEnteredPassword] = useState('');
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [showEnteredPassword, setShowEnteredPassword] = useState(false);
 
     // Guard ref to guarantee LOAD_DOCUMENT is sent exactly ONCE
     const hasSentDocumentRef = useRef(false);
@@ -161,6 +171,22 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
       },
     }));
 
+    const handleUnlockDocument = () => {
+      if (!enteredPassword.trim()) {
+        setPasswordError('Por favor ingresa la contraseña.');
+        return;
+      }
+      setPasswordError(null);
+      setIsLoading(true);
+      setLoadingMessage('Comprobando contraseña...');
+      webViewRef.current?.postMessage(
+        JSON.stringify({
+          type: 'SUBMIT_PASSWORD',
+          password: enteredPassword.trim(),
+        })
+      );
+    };
+
     // Handle messages coming from inside the WebView
     const handleMessage = (event: WebViewMessageEvent) => {
       try {
@@ -171,9 +197,22 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             sendDocumentToWebView();
             break;
 
+          case 'PASSWORD_REQUIRED':
+            setIsLoading(false);
+            setIsPasswordModalVisible(true);
+            if (data.isIncorrect) {
+              setPasswordError('Contraseña incorrecta. Inténtalo nuevamente.');
+            } else {
+              setPasswordError(null);
+            }
+            break;
+
           case 'DOCUMENT_LOADED':
             setIsLoading(false);
             setIsDocumentLoaded(true);
+            setIsPasswordModalVisible(false);
+            setPasswordError(null);
+            setEnteredPassword('');
             setShowTimeoutFallback(false);
             setTotalPages(data.totalPages);
             onLoadSuccess?.(data.totalPages);
@@ -593,11 +632,24 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
                   disableStream: true
                 });
 
+                loadingTask.onPassword = function(updateCallback, reason) {
+                  window.activePasswordCallback = updateCallback;
+                  postToApp({
+                    type: 'PASSWORD_REQUIRED',
+                    isIncorrect: reason === 2
+                  });
+                };
+
                 pdfDocument = await loadingTask.promise;
                 await renderAllPages(pdfDocument);
 
                 if (msg.initialPage && msg.initialPage > 1) {
                   setTimeout(() => scrollToPage(msg.initialPage), 300);
+                }
+              } else if (msg.type === 'SUBMIT_PASSWORD') {
+                if (window.activePasswordCallback) {
+                  postToApp({ type: 'STATUS', message: 'Comprobando contraseña...' });
+                  window.activePasswordCallback(msg.password);
                 }
               } else if (msg.type === 'ZOOM_IN') {
                 baseScaleMultiplier = Math.min(baseScaleMultiplier + 0.25, 3.0);
@@ -746,6 +798,98 @@ export const PDFEmbeddedViewer = forwardRef<PDFEmbeddedViewerRef, PDFEmbeddedVie
             </View>
           </View>
         )}
+
+        {/* Password Prompt Modal */}
+        <Modal
+          visible={isPasswordModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => {
+            setIsPasswordModalVisible(false);
+            setErrorMessage('Documento protegido con contraseña.');
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={[styles.passwordModalOverlay, { backgroundColor: colors.modalOverlay }]}
+          >
+            <View style={[styles.passwordModalCard, { backgroundColor: cardBgColor, borderColor: colors.border }]}>
+              <View style={[styles.lockIconCircle, { backgroundColor: colors.primary + '18' }]}>
+                <Ionicons name="lock-closed" size={30} color={colors.primary} />
+              </View>
+
+              <Text style={[styles.passwordModalTitle, { color: textColor }]}>
+                Documento Protegido
+              </Text>
+              <Text style={[styles.passwordModalSubtitle, { color: subtextColor }]}>
+                Este archivo PDF requiere una contraseña para abrirse.
+              </Text>
+
+              <View
+                style={[
+                  styles.modalPasswordInputWrapper,
+                  { backgroundColor: colors.cardBgElevated, borderColor: passwordError ? '#EF4444' : colors.border },
+                ]}
+              >
+                <Ionicons name="key-outline" size={17} color={passwordError ? '#EF4444' : colors.primary} />
+                <TextInput
+                  style={[styles.modalPasswordInput, { color: textColor }]}
+                  placeholder="Escribe la contraseña..."
+                  placeholderTextColor={colors.textMuted}
+                  value={enteredPassword}
+                  onChangeText={(text) => {
+                    setEnteredPassword(text);
+                    if (passwordError) setPasswordError(null);
+                  }}
+                  secureTextEntry={!showEnteredPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoFocus={true}
+                  onSubmitEditing={handleUnlockDocument}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowEnteredPassword(!showEnteredPassword)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={showEnteredPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {passwordError && (
+                <Text style={styles.passwordErrorText}>
+                  ⚠️ {passwordError}
+                </Text>
+              )}
+
+              <View style={styles.passwordModalButtons}>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { borderColor: colors.border }]}
+                  onPress={() => {
+                    setIsPasswordModalVisible(false);
+                    setErrorMessage('Documento protegido con contraseña.');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.cancelBtnText, { color: subtextColor }]}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.unlockBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleUnlockDocument}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="lock-open-outline" size={16} color="#FFF" />
+                  <Text style={styles.unlockBtnText}>Desbloquear</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </View>
     );
   }
@@ -842,6 +986,105 @@ const styles = StyleSheet.create({
   retryBtnText: {
     color: '#FFF',
     fontSize: 15,
+    fontWeight: '600',
+  },
+  passwordModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  passwordModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  lockIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  passwordModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  passwordModalSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  modalPasswordInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 48,
+    marginBottom: 8,
+  },
+  modalPasswordInput: {
+    flex: 1,
+    fontSize: 14,
+    marginLeft: 8,
+    paddingVertical: 0,
+  },
+  eyeBtn: {
+    padding: 4,
+  },
+  passwordErrorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '600',
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+    marginTop: 2,
+  },
+  passwordModalButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+    marginTop: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  unlockBtn: {
+    flex: 1.2,
+    height: 44,
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  unlockBtnText: {
+    color: '#FFF',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

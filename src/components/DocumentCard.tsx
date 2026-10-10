@@ -76,6 +76,15 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
           <Text style={[styles.sizeTag, { color: colors.textSecondary }]}>{formatFileSize(document.fileSize)}</Text>
           <Text style={[styles.bullet, { color: colors.textMuted }]}>•</Text>
           <Text style={[styles.formatTag, { color: colors.primaryLight }]}>PDF</Text>
+          {document.isEncrypted && (
+            <>
+              <Text style={[styles.bullet, { color: colors.textMuted }]}>•</Text>
+              <View style={styles.lockBadge}>
+                <Ionicons name="lock-closed" size={10} color="#F59E0B" />
+                <Text style={styles.lockBadgeText}>Protegido</Text>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
@@ -200,6 +209,20 @@ const styles = StyleSheet.create({
     marginRight: SPACING.sm,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  lockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: RADIUS.xs,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+  },
+  lockBadgeText: {
+    color: '#F59E0B',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
 

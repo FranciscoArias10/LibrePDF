@@ -77,9 +77,12 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 ---
 
 ### 🔒 Protección con Contraseña y Cifrado
-- **Prioridad:** Baja
+- **Estado:** ✅ *Implementado*
 - **Descripción:** 
   - Opcionalmente añadir una clave de apertura al PDF generado para proteger documentos confidenciales.
+  - Cifrado estándar RC4 de 128 bits compatible con todos los lectores de PDF (Adobe Acrobat, Chrome, Apple Books, Drive, etc.).
+  - Desbloqueo interactivo en el Visor Interno embebido con modal de ingreso de contraseña y validación en tiempo real.
+  - Distintivo visual de archivo protegido con candado en el historial de documentos.
 
 ---
 
