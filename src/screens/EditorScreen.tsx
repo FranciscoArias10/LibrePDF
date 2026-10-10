@@ -30,6 +30,7 @@ import { FilterApplyModal } from '../components/FilterApplyModal';
 import { PermissionModal, PermissionType } from '../components/PermissionModal';
 import { PageLayoutModal } from '../components/PageLayoutModal';
 import { SignatureStampModal } from '../components/SignatureStampModal';
+import { ReorderPagesModal } from '../components/ReorderPagesModal';
 import { ImageLayoutTransform, SignatureStamp } from '../types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Editor'>;
@@ -69,6 +70,9 @@ export const EditorScreen: React.FC = () => {
   // Signature Stamp State
   const [isSignatureModalVisible, setIsSignatureModalVisible] = useState(false);
   const [signatureIndex, setSignatureIndex] = useState<number | null>(null);
+
+  // Reorder Pages Modal State
+  const [isReorderModalVisible, setIsReorderModalVisible] = useState(false);
 
   // Append new images from Camera continuous scan
   useEffect(() => {
@@ -181,6 +185,14 @@ export const EditorScreen: React.FC = () => {
     setPages(updated);
     setSelectedIndex(index + 1);
   }, [pages]);
+
+  // Reorder all pages from modal
+  const handleReorderPages = (reordered: PageImage[]) => {
+    setPages(reordered);
+    if (selectedIndex >= reordered.length) {
+      setSelectedIndex(Math.max(0, reordered.length - 1));
+    }
+  };
 
   // Delete page
   const handleDeletePage = useCallback((index: number) => {
@@ -396,6 +408,22 @@ export const EditorScreen: React.FC = () => {
           </TouchableOpacity>
 
           <View style={styles.docConfigRight}>
+            {pages.length > 1 && (
+              <TouchableOpacity
+                style={[
+                  styles.organizeChip,
+                  { backgroundColor: colors.cardBg, borderColor: colors.border },
+                ]}
+                onPress={() => setIsReorderModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="reorder-four" size={15} color={colors.primary} />
+                <Text style={[styles.orientationChipText, { color: colors.textPrimary }]}>
+                  Organizar
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[
                 styles.orientationChip,
@@ -572,6 +600,21 @@ export const EditorScreen: React.FC = () => {
           setSignatureIndex(null);
         }}
       />
+
+      {/* Reorder Pages Modal */}
+      <ReorderPagesModal
+        visible={isReorderModalVisible}
+        items={pages}
+        getItemKey={(item) => item.id}
+        getItemUri={(item) => item.uri}
+        getItemRotation={(item) => item.rotation}
+        getItemBadge={(item) =>
+          item.orientation === 'portrait' ? 'Vertical' : item.orientation === 'landscape' ? 'Horizontal' : undefined
+        }
+        title="Organizar Páginas"
+        onSave={handleReorderPages}
+        onClose={() => setIsReorderModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -636,6 +679,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs + 2,
+  },
+  organizeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
   },
   orientationChip: {
     flexDirection: 'row',
