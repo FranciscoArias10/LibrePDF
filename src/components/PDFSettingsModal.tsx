@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PDFSettings, PageSize, PageOrientation, PageMargin } from '../types';
@@ -33,16 +34,22 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
   const { colors } = useTheme();
   const [settings, setSettings] = useState<PDFSettings>(initialSettings);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(!!initialSettings.password);
+  const [password, setPassword] = useState(initialSettings.password || '');
+  const [showPassword, setShowPassword] = useState(false);
 
   React.useEffect(() => {
     if (visible) {
       setSettings(initialSettings);
+      setIsPasswordProtected(!!initialSettings.password);
+      setPassword(initialSettings.password || '');
     }
   }, [visible, initialSettings]);
 
   const handleClose = () => {
     const finalTitle = settings.documentTitle.trim() || generateDefaultDocumentTitle();
-    onSaveSettings?.({ ...settings, documentTitle: finalTitle });
+    const finalPassword = isPasswordProtected ? password.trim() : '';
+    onSaveSettings?.({ ...settings, documentTitle: finalTitle, password: finalPassword });
     onClose();
   };
 
@@ -157,6 +164,82 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
                 })}
               </View>
             </View>
+
+            {/* Password Security */}
+            <View style={styles.section}>
+              <View style={styles.securityHeaderRow}>
+                <View style={styles.securityHeaderLeft}>
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={16}
+                    color={isPasswordProtected ? colors.primary : colors.textSecondary}
+                  />
+                  <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginBottom: 0 }]}>
+                    Seguridad y Contraseña
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.toggleSwitch,
+                    {
+                      backgroundColor: isPasswordProtected ? colors.primary : colors.cardBgElevated,
+                      borderColor: isPasswordProtected ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => {
+                    const next = !isPasswordProtected;
+                    setIsPasswordProtected(next);
+                    if (!next) {
+                      setPassword('');
+                      setSettings({ ...settings, password: '' });
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.toggleCircle,
+                      isPasswordProtected ? styles.toggleCircleOn : styles.toggleCircleOff,
+                    ]}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {isPasswordProtected && (
+                <View style={styles.passwordContainer}>
+                  <View style={[styles.passwordInputWrapper, { backgroundColor: colors.cardBgElevated, borderColor: colors.border }]}>
+                    <Ionicons name="key-outline" size={17} color={colors.primary} />
+                    <TextInput
+                      style={[styles.passwordInput, { color: colors.textPrimary }]}
+                      placeholder="Escribe la clave de apertura..."
+                      placeholderTextColor={colors.textMuted}
+                      value={password}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        setSettings({ ...settings, password: text });
+                      }}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={styles.eyeBtn}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={18}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.passwordHint, { color: colors.textMuted }]}>
+                    🔒 El PDF estará cifrado y solicitará esta clave al abrirse en cualquier lector.
+                  </Text>
+                </View>
+              )}
+            </View>
           </ScrollView>
 
           {/* Footer Actions */}
@@ -181,8 +264,16 @@ export const PDFSettingsModal: React.FC<PDFSettingsModalProps> = ({
               <TouchableOpacity
                 style={[styles.generateBtn, { backgroundColor: colors.primary }]}
                 onPress={() => {
+                  if (isPasswordProtected && !password.trim()) {
+                    Alert.alert(
+                      'Contraseña requerida',
+                      'Por favor escribe una clave para proteger el PDF o desactiva la opción.'
+                    );
+                    return;
+                  }
                   const finalTitle = settings.documentTitle.trim() || generateDefaultDocumentTitle();
-                  onGenerate({ ...settings, documentTitle: finalTitle });
+                  const finalPassword = isPasswordProtected ? password.trim() : '';
+                  onGenerate({ ...settings, documentTitle: finalTitle, password: finalPassword });
                 }}
                 activeOpacity={0.85}
               >
@@ -306,5 +397,61 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  securityHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xs,
+  },
+  securityHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  toggleSwitch: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFF',
+  },
+  toggleCircleOn: {
+    alignSelf: 'flex-end',
+  },
+  toggleCircleOff: {
+    alignSelf: 'flex-start',
+  },
+  passwordContainer: {
+    marginTop: SPACING.sm,
+  },
+  passwordInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.sm + 2,
+    gap: 8,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 14,
+    height: '100%',
+  },
+  eyeBtn: {
+    padding: 4,
+  },
+  passwordHint: {
+    fontSize: 11,
+    marginTop: 6,
+    lineHeight: 15,
   },
 });
