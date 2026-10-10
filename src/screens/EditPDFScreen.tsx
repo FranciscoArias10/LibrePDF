@@ -26,6 +26,7 @@ import { PDFThumbnailGenerator } from '../components/PDFThumbnailGenerator';
 import { PermissionModal, PermissionType } from '../components/PermissionModal';
 import { DocumentSuccessModal } from '../components/DocumentSuccessModal';
 import { ConfirmActionModal } from '../components/ConfirmActionModal';
+import { ReorderPagesModal } from '../components/ReorderPagesModal';
 import { saveEditedPDF } from '../utils/pdfEditor';
 import { getPDFPageCount } from '../utils/pdfMerger';
 import { SPACING, RADIUS } from '../constants/theme';
@@ -78,6 +79,9 @@ export const EditPDFScreen: React.FC = () => {
     message: string;
     icon?: keyof typeof Ionicons.glyphMap;
   } | null>(null);
+
+  // Native In-App Reorder Modal
+  const [isReorderModalVisible, setIsReorderModalVisible] = useState(false);
 
   // Initialize pages from original document
   useEffect(() => {
@@ -365,6 +369,20 @@ export const EditPDFScreen: React.FC = () => {
           </View>
 
           <View style={styles.addButtonsGroup}>
+            {pages.length > 1 && (
+              <TouchableOpacity
+                style={[
+                  styles.organizeBtn,
+                  { backgroundColor: colors.cardBgElevated, borderColor: colors.border },
+                ]}
+                onPress={() => setIsReorderModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="reorder-four" size={17} color={colors.primary} />
+                <Text style={[styles.organizeBtnText, { color: colors.primary }]}>Organizar</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[styles.addBtn, { backgroundColor: colors.primaryDark }]}
               onPress={handlePickFromGallery}
@@ -918,6 +936,21 @@ export const EditPDFScreen: React.FC = () => {
           onCancel={() => setInfoModalData(null)}
         />
       )}
+
+      {/* Reorder Pages Modal */}
+      <ReorderPagesModal
+        visible={isReorderModalVisible}
+        items={pages}
+        getItemKey={(item) => item.id}
+        getItemUri={(item) => item.thumbnailUri || item.imageUri || ''}
+        getItemRotation={(item) => item.rotation || 0}
+        getItemBadge={(item) =>
+          item.type === 'existing' ? `Orig. ${item.originalPageNumber}` : 'Nueva'
+        }
+        title="Organizar Páginas del PDF"
+        onSave={(reordered) => setPages(reordered)}
+        onClose={() => setIsReorderModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -955,7 +988,21 @@ const styles = StyleSheet.create({
   },
   addButtonsGroup: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
+  },
+  organizeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 5,
+  },
+  organizeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   addBtn: {
     flex: 1,
@@ -964,7 +1011,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 10,
-    gap: 6,
+    gap: 5,
   },
   addBtnText: {
     color: '#FFF',
