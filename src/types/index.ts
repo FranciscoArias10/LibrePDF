@@ -53,6 +53,7 @@ export interface PDFSettings {
   quality: number; // 0.1 to 1.0
   documentTitle: string;
   compressImages: boolean;
+  password?: string; // Optional password for encryption
 }
 
 export interface SavedPDFDocument {
@@ -63,6 +64,7 @@ export interface SavedPDFDocument {
   pageCount: number;
   createdAt: number; // timestamp
   thumbnailUri?: string;
+  isEncrypted?: boolean; // Whether the PDF is password-protected
 }
 
 export interface EditablePDFPage {

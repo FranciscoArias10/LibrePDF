@@ -115,5 +115,6 @@ export const DEFAULT_PDF_SETTINGS = {
   quality: 0.85,
   documentTitle: '',
   compressImages: true,
+  password: '',
 };
 
