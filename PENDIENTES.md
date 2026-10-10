@@ -57,9 +57,14 @@ Este documento contiene el listado oficial de tareas, requisitos de tienda y fun
 ---
 
 ### 🔀 Reordenamiento de Páginas por Arrastre (Drag & Drop)
-- **Prioridad:** Media
+- **Estado:** ✅ *Implementado*
 - **Descripción:** 
-  - Permitir mantener presionada una miniatura de página y arrastrarla para cambiar su posición en el PDF de manera táctil y rápida.
+  - Vista en cuadrícula interactiva de 3 columnas para visualizar y organizar todas las páginas del documento simultáneamente.
+  - Arrastre y soltado fluido (Drag & Drop) con respuesta háptica y animaciones nativas manteniendo presionada la miniatura o usando el asa de arrastre.
+  - Indicador visual dinámico de posición destino al mover elementos entre celdas.
+  - Barra de herramientas rápida y accesible para saltar al inicio, fin, o mover pasos adelante/atrás con un solo toque.
+  - Botón de inversión instantánea de orden (1 ⇄ N) para corregir escaneos realizados en orden inverso.
+  - Integrado tanto en el Editor principal de fotos como en el Editor de documentos PDF existentes.
 
 ---
 
