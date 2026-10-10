@@ -1,8 +1,10 @@
 import * as Print from 'expo-print';
 import { PDFDocument } from 'pdf-lib';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as base64js from 'base64-js';
 import { PageImage, PDFSettings, PageOrientation } from '../types';
 import { getBase64ImageUri, getCSSFilterStyle } from './imageProcessor';
+import { encryptPDFBytes } from './pdfEncryptor';
 
 /**
  * Returns margin padding in CSS pixels based on setting
@@ -180,7 +182,7 @@ async function generateBatchPDF(
 export async function generatePDF(
   images: PageImage[],
   settings: PDFSettings
-): Promise<{ uri: string; base64?: string; pageCount: number }> {
+): Promise<{ uri: string; base64: string; pageCount: number; isEncrypted: boolean }> {
   if (images.length === 0) {
     throw new Error('No hay imágenes para generar el PDF');
   }
@@ -192,66 +194,91 @@ export async function generatePDF(
   // Check if all pages share uniform orientation
   const isUniform = effectiveOrientations.every((o) => o === effectiveOrientations[0]);
 
+  let rawUri: string;
+  let rawBase64: string;
+
   if (isUniform) {
     // Uniform document: generate in a single pass (fastest)
     const result = await generateBatchPDF(images, settings, effectiveOrientations[0]);
-    return {
-      uri: result.uri,
-      base64: result.base64,
-      pageCount: images.length,
+    rawUri = result.uri;
+    rawBase64 = result.base64;
+  } else {
+    // Mixed orientations: partition consecutive pages of identical orientation into batches
+    interface Batch {
+      orientation: PageOrientation;
+      images: PageImage[];
+    }
+
+    const batches: Batch[] = [];
+    let currentBatch: Batch = {
+      orientation: effectiveOrientations[0],
+      images: [images[0]],
     };
+
+    for (let i = 1; i < images.length; i++) {
+      const o = effectiveOrientations[i];
+      if (o === currentBatch.orientation) {
+        currentBatch.images.push(images[i]);
+      } else {
+        batches.push(currentBatch);
+        currentBatch = {
+          orientation: o,
+          images: [images[i]],
+        };
+      }
+    }
+    batches.push(currentBatch);
+
+    // Render each batch to a temporary PDF
+    const batchResults: { uri: string; base64: string }[] = [];
+    for (const batch of batches) {
+      const batchResult = await generateBatchPDF(batch.images, settings, batch.orientation);
+      batchResults.push(batchResult);
+    }
+
+    // Merge the batch PDFs using pdf-lib (preserves distinct dimensions and orientations per page)
+    const mergedPdf = await PDFDocument.create();
+    for (const batchResult of batchResults) {
+      const loadedDoc = await PDFDocument.load(batchResult.base64, { ignoreEncryption: true });
+      const copiedPages = await mergedPdf.copyPages(loadedDoc, loadedDoc.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+    }
+
+    const mergedBase64 = await mergedPdf.saveAsBase64();
+    const tempUri = `${FileSystem.cacheDirectory}mixed_${Date.now()}.pdf`;
+    await FileSystem.writeAsStringAsync(tempUri, mergedBase64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    rawUri = tempUri;
+    rawBase64 = mergedBase64;
   }
 
-  // Mixed orientations: partition consecutive pages of identical orientation into batches
-  interface Batch {
-    orientation: PageOrientation;
-    images: PageImage[];
-  }
+  // Encrypt with password if specified
+  let finalUri = rawUri;
+  let finalBase64 = rawBase64;
+  let isEncrypted = false;
 
-  const batches: Batch[] = [];
-  let currentBatch: Batch = {
-    orientation: effectiveOrientations[0],
-    images: [images[0]],
-  };
-
-  for (let i = 1; i < images.length; i++) {
-    const o = effectiveOrientations[i];
-    if (o === currentBatch.orientation) {
-      currentBatch.images.push(images[i]);
-    } else {
-      batches.push(currentBatch);
-      currentBatch = {
-        orientation: o,
-        images: [images[i]],
-      };
+  const cleanPassword = settings.password?.trim();
+  if (cleanPassword) {
+    try {
+      const rawBytes = base64js.toByteArray(rawBase64);
+      const encryptedBytes = await encryptPDFBytes(rawBytes, cleanPassword);
+      finalBase64 = base64js.fromByteArray(encryptedBytes);
+      finalUri = `${FileSystem.cacheDirectory}encrypted_${Date.now()}.pdf`;
+      await FileSystem.writeAsStringAsync(finalUri, finalBase64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      isEncrypted = true;
+    } catch (encryptError) {
+      console.error('Failed to encrypt PDF:', encryptError);
+      throw new Error('No se pudo proteger el PDF con contraseña. Inténtalo nuevamente.');
     }
   }
-  batches.push(currentBatch);
-
-  // Render each batch to a temporary PDF
-  const batchResults: { uri: string; base64: string }[] = [];
-  for (const batch of batches) {
-    const batchResult = await generateBatchPDF(batch.images, settings, batch.orientation);
-    batchResults.push(batchResult);
-  }
-
-  // Merge the batch PDFs using pdf-lib (preserves distinct dimensions and orientations per page)
-  const mergedPdf = await PDFDocument.create();
-  for (const batchResult of batchResults) {
-    const loadedDoc = await PDFDocument.load(batchResult.base64, { ignoreEncryption: true });
-    const copiedPages = await mergedPdf.copyPages(loadedDoc, loadedDoc.getPageIndices());
-    copiedPages.forEach((page) => mergedPdf.addPage(page));
-  }
-
-  const mergedBase64 = await mergedPdf.saveAsBase64();
-  const tempUri = `${FileSystem.cacheDirectory}mixed_${Date.now()}.pdf`;
-  await FileSystem.writeAsStringAsync(tempUri, mergedBase64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
 
   return {
-    uri: tempUri,
-    base64: mergedBase64,
+    uri: finalUri,
+    base64: finalBase64,
     pageCount: images.length,
+    isEncrypted,
   };
 }

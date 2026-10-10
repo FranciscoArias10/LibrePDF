@@ -30,7 +30,8 @@ export async function savePDFDocument(
   base64Data: string | undefined,
   title: string,
   pageCount: number,
-  thumbnailUri?: string
+  thumbnailUri?: string,
+  isEncrypted?: boolean
 ): Promise<SavedPDFDocument> {
   const documentId = `pdf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const cleanTitle = title?.trim() || generateDefaultDocumentTitle();
@@ -71,6 +72,7 @@ export async function savePDFDocument(
     pageCount,
     createdAt: Date.now(),
     thumbnailUri,
+    isEncrypted: !!isEncrypted,
   };
 
   // Update AsyncStorage list

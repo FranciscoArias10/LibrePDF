@@ -327,7 +327,8 @@ export const EditorScreen: React.FC = () => {
         pdfResult.base64,
         docTitle,
         pdfResult.pageCount,
-        pages[0]?.uri
+        pages[0]?.uri,
+        pdfResult.isEncrypted
       );
 
       setIsGenerating(false);
